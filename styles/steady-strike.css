@@ -1,0 +1,52 @@
+/*
+ * dnd5e styles every roll inside a .card-summary as a compact row, made for save
+ * summaries. These are its six rules (dnd5e 6.0.6, dnd5e.css), each undone here for
+ * Steady Strike's attack and damage rows (.steady-strike-roll) only:
+ *
+ *   .card-summary button.dice-roll          --button-*-color: transparent; justify-content: end; padding: 0
+ *   .card-summary button.dice-roll .d20die  display: none
+ *   .card-summary button.dice-roll .result  flex: unset
+ *   .card-summary button.dice-roll .icons   position: unset
+ *   .card-summary button.dice-roll .total   border: none
+ *   ... .total::before, ::after             content: none
+ *
+ * Each value is the one dnd5e's own (non-summary) rules give a roll button on its card,
+ * copied from them. (Not `revert-layer`: dnd5e's stylesheet is outside cascade layers, so
+ * it would skip those rules too and fall back to Foundry's generic button.)
+ * Selectors are dnd5e's plus .steady-strike-roll, so they win on specificity.
+ */
+
+/* dnd5e: .chat-log .message.compact button { --button-*-color } and .dnd5e2 button { padding; justify-content } */
+:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-strike-roll button.dice-roll {
+  --button-background-color: var(--dnd5e-chat-button-background);
+  --button-border-color: var(--dnd5e-chat-button-border);
+  --button-hover-border-color: var(--dnd5e-color-gold);
+  justify-content: center;
+  padding: 3px;
+}
+
+/* dnd5e sets no display on .d20die; it is position: absolute, which makes it a block. */
+:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-strike-roll button.dice-roll .d20die {
+  display: block;
+}
+
+/* dnd5e: button.dice-roll .result { flex: 1 } */
+:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-strike-roll button.dice-roll .result {
+  flex: 1;
+}
+
+/* dnd5e: button.dice-roll .icons { position: absolute } */
+:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-strike-roll button.dice-roll .icons {
+  position: absolute;
+}
+
+/* dnd5e: .dice-roll :is(.result, .dice-total) > .total { border: 1px solid var(--dnd5e-color-gold) } */
+:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-strike-roll button.dice-roll .total {
+  border: 1px solid var(--dnd5e-color-gold);
+}
+
+/* dnd5e: .total::before, .total::after { content: "" } */
+:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-strike-roll button.dice-roll .total::before,
+:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-strike-roll button.dice-roll .total::after {
+  content: "";
+}

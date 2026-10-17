@@ -1,0 +1,42 @@
+{{!-- Attack roll inside its usage card. Context: AttackMessageData#_prepareContext. --}}
+{{#if mastery}}
+<p class="supplement">
+    <strong>{{ localize "DND5E.WEAPON.Mastery.Flavor" }}</strong>
+    {{#if mastery.reference}}
+    <a class="content-link" draggable="true" data-link data-uuid="{{ mastery.reference }}"
+       data-tooltip="{{ mastery.label }}">{{ mastery.label }}</a>
+    {{else}}
+    {{ mastery.label }}
+    {{/if}}
+</p>
+{{/if}}
+
+{{!-- Property tags, as on the attack card. --}}
+{{> "dnd5e.card-rows" }}
+
+{{#if targets.length}}
+<section class="icon-row">
+    <i class="fa-fw fa-solid fa-bullseye" aria-label="{{ localize "DND5E.CHATMESSAGE.Row.Targets" }}"></i>
+    <ul class="unlist targets pills">
+        {{#each targets}}
+        <li>
+            <target-pill {{#if showResult}}{{ ifThen isMiss "data-miss" "data-hit" }}{{/if}}
+                {{#if showAC}}data-value="{{ ifThen hasAC ac "∞" }}"{{/if}}>
+                <label>{{ name }}</label>
+                <datalist>
+                    <option value="{{ token }}">{{ name }}</option>
+                </datalist>
+            </target-pill>
+        </li>
+        {{/each}}
+    </ul>
+</section>
+{{/if}}
+
+{{!-- Same rows as dnd5e.card-rolls, marked so the roll keeps its card look (styles/steady-strike.css). --}}
+{{#each rolls}}
+<section class="icon-row steady-strike-roll">
+    <i class="fa-fw fa-solid fa-dice" aria-label="{{ localize "DND5E.CHATMESSAGE.Row.Roll" }}"></i>
+    {{{ this }}}
+</section>
+{{/each}}

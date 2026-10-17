@@ -1,0 +1,37 @@
+{
+  "id": "steady-strike",
+  "title": "Steady Strike",
+  "description": "Shows attack, damage and healing rolls inside their dnd5e 6 item card, using dnd5e's own card summaries.",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14.369"
+  },
+  "authors": [
+    {
+      "name": "Matteo Zanella"
+    }
+  ],
+  "url": "https://github.com/MatteoZanella/steady-strike",
+  "bugs": "https://github.com/MatteoZanella/steady-strike/issues",
+  "license": "LICENSE",
+  "readme": "README.md",
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "6.0.0",
+          "verified": "6.0.6"
+        }
+      }
+    ]
+  },
+  "esmodules": [
+    "scripts/steady-strike.mjs"
+  ],
+  "styles": [
+    "styles/steady-strike.css"
+  ]
+}

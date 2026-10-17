@@ -1,0 +1,23 @@
+{{!-- Damage or healing roll inside its usage card. Context: DamageMessageData#_prepareContext. --}}
+{{#if onSave}}
+<p class="supplement"><strong>{{ localize "DND5E.SAVE.OnSave" }}</strong> {{ onSave }}</p>
+{{/if}}
+
+{{!-- Property tags, as on the damage card. --}}
+{{> "dnd5e.card-rows" }}
+
+<section class="icon-row steady-strike-roll">
+    <i class="fa-fw fa-solid fa-dice" aria-label="{{ localize "DND5E.CHATMESSAGE.Row.Roll" }}"></i>
+    <button type="button" class="dice-roll" {{ disabled isPrivate }}>
+        <span class="result">
+            <strong class="total">{{ ifThen isPrivate "?" total }}</strong>
+        </span>
+    </button>
+    {{#unless isPrivate}}
+    <div class="roll-breakdown" popover>{{> "dnd5e.damage-breakdown" }}</div>
+    {{/unless}}
+</section>
+
+{{#if showTray}}
+<damage-application class="dnd5e2"></damage-application>
+{{/if}}
