@@ -1,0 +1,51 @@
+{{!-- An attack after the first, as its own card: header, attack, its damage, next actions. --}}
+<div class="chat-card">
+    {{> "dnd5e.card-header" }}
+    {{#if mastery}}
+    <p class="supplement">
+        <strong>{{ localize "DND5E.WEAPON.Mastery.Flavor" }}</strong>
+        {{#if mastery.reference}}
+        <a class="content-link" draggable="true" data-link data-uuid="{{ mastery.reference }}"
+           data-tooltip="{{ mastery.label }}">{{ mastery.label }}</a>
+        {{else}}
+        {{ mastery.label }}
+        {{/if}}
+    </p>
+    {{/if}}
+</div>
+
+{{#if targets.length}}
+<section class="icon-row">
+    <i class="fa-fw fa-solid fa-bullseye" aria-label="{{ localize "DND5E.CHATMESSAGE.Row.Targets" }}"></i>
+    <ul class="unlist targets pills">
+        {{#each targets}}
+        <li>
+            <target-pill {{#if showResult}}{{#unless @root.steadyStrike.rolling}}{{ ifThen isMiss "data-miss" "data-hit" }}{{/unless}}{{/if}}
+                {{#if showAC}}data-value="{{ ifThen hasAC ac "∞" }}"{{/if}}>
+                <label>{{ name }}</label>
+                <datalist>
+                    <option value="{{ token }}">{{ name }}</option>
+                </datalist>
+            </target-pill>
+        </li>
+        {{/each}}
+    </ul>
+</section>
+{{/if}}
+
+{{#if steadyStrike.rolling}}
+{{> "steady-strike.rolling-roll" icon="fa-dice-d20" }}
+{{else}}
+{{> "dnd5e.card-rolls" }}
+{{/if}}
+
+{{#each summaries}}
+<div class="card-summary" data-message-id="{{ id }}">{{{ html }}}</div>
+{{/each}}
+
+{{!-- Buttons act for the usage card: dnd5e reads the card from the closest [data-message-id]. --}}
+{{#if buttonGroups}}
+<div data-message-id="{{ strike.usageId }}" data-steady-strike-host="{{ strike.hostId }}">
+    {{> "dnd5e.card-buttons" }}
+</div>
+{{/if}}

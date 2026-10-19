@@ -1,0 +1,22 @@
+{{!-- dnd5e's usage card, with the buttons below the rolls. --}}
+{{#if content}}
+{{{ content }}}
+{{else}}
+{{> "dnd5e.card-face" buttonGroups=false }}
+{{/if}}
+
+{{#each summaries}}
+<div class="card-summary" data-message-id="{{ id }}" data-target-uuid="{{ token.uuid }}">{{{ html }}}</div>
+{{/each}}
+
+{{#if effects.length}}
+<effect-application class="dnd5e2">
+    {{#each effects}}
+    <option value="{{ uuid }}"></option>
+    {{/each}}
+</effect-application>
+{{/if}}
+
+{{#unless content}}
+{{> "dnd5e.card-buttons" }}
+{{/unless}}

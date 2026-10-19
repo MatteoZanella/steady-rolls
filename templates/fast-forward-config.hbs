@@ -1,0 +1,14 @@
+<section class="steady-strike-fast-forward">
+    <p class="hint">{{ localize "STEADY_STRIKE.Settings.FastForward.Hint" key=key }}</p>
+    <fieldset>
+        <legend>{{ localize "STEADY_STRIKE.Settings.FastForward.Legend" }}</legend>
+        <div class="steady-strike-columns">
+            {{#each types}}
+            <label class="steady-strike-column">
+                <span>{{ localize label }}</span>
+                <input type="checkbox" name="{{ type }}" {{ checked checked }}>
+            </label>
+            {{/each}}
+        </div>
+    </fieldset>
+</section>

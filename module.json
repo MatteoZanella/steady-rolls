@@ -1,7 +1,7 @@
 {
   "id": "steady-strike",
   "title": "Steady Strike",
-  "description": "Shows attack, damage and healing rolls inside their dnd5e 6 item card, using dnd5e's own card summaries.",
+  "description": "Shows each attack of a dnd5e 6 item with its damage on one card, using dnd5e's own card summaries.",
   "version": "0.1.0",
   "compatibility": {
     "minimum": "14",
@@ -33,5 +33,12 @@
   ],
   "styles": [
     "styles/steady-strike.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
   ]
 }

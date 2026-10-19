@@ -1,0 +1,9 @@
+{{!-- A roll whose dice are still rolling: a tumbling die instead of the result. --}}
+<section class="icon-row steady-strike-roll">
+    <i class="fa-fw fa-solid fa-dice" aria-label="{{ localize "DND5E.CHATMESSAGE.Row.Roll" }}"></i>
+    <button type="button" class="dice-roll steady-strike-rolling" disabled aria-busy="true"
+            aria-label="{{ localize "STEADY_STRIKE.Rolling" }}" data-tooltip="{{ localize "STEADY_STRIKE.Rolling" }}">
+        {{!-- The zero-width space gives the frame a number's height. --}}
+        <span class="result"><strong class="total"><i class="fa-solid {{ icon }}" inert></i>&#8203;</strong></span>
+    </button>
+</section>

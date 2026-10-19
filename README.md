@@ -1,9 +1,14 @@
 # Steady Strike
 
-Foundry VTT v14 module for dnd5e 6. Shows attack, damage and healing rolls inside the item
-card that started them, instead of as separate chat cards.
+Foundry VTT v14 module for dnd5e 6.
+
+- Attack, damage and healing rolls are shown inside the item card that made them.
+- Each further attack gets its own short card, with its own damage.
+- The Attack and Damage buttons sit at the bottom of the card and disappear once used.
+- Attack breakdowns name each bonus: ability, proficiency, item, effects.
+- Optional fast-forward per roll type, and automatic damage (never, on hit, always).
+- With Dice So Nice, cards appear at once and show their results when the dice land.
 
 ## License
 
-MIT, see [LICENSE](LICENSE). The summary templates are adapted from the dnd5e system
-(MIT, Copyright 2021 Andrew Clayton); see [NOTICE](NOTICE).
+MIT, see [LICENSE](LICENSE). Some templates are adapted from the dnd5e system; see [NOTICE](NOTICE).

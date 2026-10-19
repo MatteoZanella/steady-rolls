@@ -1,0 +1,28 @@
+{
+  "STEADY_STRIKE": {
+    "Rolling": "Rolling…",
+    "Settings": {
+      "AutoDamage": {
+        "Name": "Roll damage automatically",
+        "Hint": "For attacks rolled from an item card. On hit: at least one target must be hit.",
+        "Never": "Never",
+        "Hit": "On hit",
+        "Always": "Always"
+      },
+      "FastForward": {
+        "Name": "Fast-forward rolls",
+        "Label": "Configure",
+        "MenuHint": "Choose which rolls skip their dialog.",
+        "Hint": "Checked rolls skip their dialog. Hold {key} to show it.",
+        "Legend": "Skip the dialog for",
+        "Unbound": "(no key bound)",
+        "Type": {
+          "use": "Item use",
+          "attack": "Attacks",
+          "damage": "Damage and healing",
+          "checks": "Checks and saves"
+        }
+      }
+    }
+  }
+}

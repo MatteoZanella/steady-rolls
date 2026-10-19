@@ -1,19 +1,8 @@
 /*
- * dnd5e styles every roll inside a .card-summary as a compact row, made for save
- * summaries. These are its six rules (dnd5e 6.0.6, dnd5e.css), each undone here for
- * Steady Strike's attack and damage rows (.steady-strike-roll) only:
- *
- *   .card-summary button.dice-roll          --button-*-color: transparent; justify-content: end; padding: 0
- *   .card-summary button.dice-roll .d20die  display: none
- *   .card-summary button.dice-roll .result  flex: unset
- *   .card-summary button.dice-roll .icons   position: unset
- *   .card-summary button.dice-roll .total   border: none
- *   ... .total::before, ::after             content: none
- *
- * Each value is the one dnd5e's own (non-summary) rules give a roll button on its card,
- * copied from them. (Not `revert-layer`: dnd5e's stylesheet is outside cascade layers, so
- * it would skip those rules too and fall back to Foundry's generic button.)
- * Selectors are dnd5e's plus .steady-strike-roll, so they win on specificity.
+ * dnd5e styles rolls inside a .card-summary as compact rows (for save summaries). For
+ * Steady Strike's rows (.steady-strike-roll), each of those rules is undone with the value
+ * dnd5e gives a roll on its own card. Not `revert-layer`: dnd5e's stylesheet is unlayered,
+ * so that would also skip dnd5e's card rules.
  */
 
 /* dnd5e: .chat-log .message.compact button { --button-*-color } and .dnd5e2 button { padding; justify-content } */
@@ -49,4 +38,59 @@
 :is(.chat-log, .chat-popout) .message.compact .card-summary .steady-strike-roll button.dice-roll .total::before,
 :is(.chat-log, .chat-popout) .message.compact .card-summary .steady-strike-roll button.dice-roll .total::after {
   content: "";
+}
+
+/* Card buttons below the rolls: dnd5e's .card-summary separator. */
+:is(.chat-log, .chat-popout) .message.compact .message-content > .card-summary + section.icon-row,
+:is(.chat-log, .chat-popout) .message.compact .message-content > .card-summary + [data-steady-strike-host] {
+  border-block-start: 1px dashed var(--dnd5e-color-blue-gray-3);
+  margin: 4px -8px 0;
+  padding: 6px 8px 0;
+}
+
+/* Fast-forward settings: hint, then one column per roll type. */
+#steady-strike-fast-forward .steady-strike-fast-forward {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+#steady-strike-fast-forward .steady-strike-fast-forward .hint {
+  margin: 0;
+}
+#steady-strike-fast-forward .steady-strike-columns {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+/* Equal-height columns, checkbox at the bottom, so the checkboxes line up. */
+#steady-strike-fast-forward .steady-strike-column {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: space-between;
+  text-align: center;
+}
+#steady-strike-fast-forward .steady-strike-column > input {
+  margin: 0;
+}
+
+/* Dice still rolling: a tumbling die in the total's frame, sized like a number. */
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll.steady-strike-rolling {
+  cursor: progress;
+  opacity: 1;
+}
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll.steady-strike-rolling .total i {
+  animation: steady-strike-tumble 1.2s linear infinite;
+  color: var(--dnd5e-color-gold);
+  display: inline-block;
+  font-size: 0.75em;
+}
+@keyframes steady-strike-tumble {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.chat-log, .chat-popout) .message.compact button.dice-roll.steady-strike-rolling .total i {
+    animation: none;
+  }
 }
