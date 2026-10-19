@@ -3,6 +3,10 @@
     <fieldset>
         <legend>{{ localize "STEADY_STRIKE.Settings.FastForward.Legend" }}</legend>
         <div class="steady-strike-columns">
+            <label class="steady-strike-column steady-strike-all">
+                <span>{{ localize "STEADY_STRIKE.Settings.FastForward.All" }}</span>
+                <input type="checkbox" data-all>
+            </label>
             {{#each types}}
             <label class="steady-strike-column">
                 <span>{{ localize label }}</span>

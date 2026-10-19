@@ -12,6 +12,8 @@ import { diceLanded, releaseDice } from "./dice.mjs";
 
 const STRIKE_TEMPLATE = `${TEMPLATES}/strike-card.hbs`;
 const USAGE_TEMPLATE = `${TEMPLATES}/usage-card.hbs`;
+/** Buttons rolled once per card, by the message type of their roll: hidden once rolled. */
+const ONE_SHOT = { rollDamage: "damage", rollHealing: "healing" };
 /** Card action for a damage roll that belongs to the card's attack. */
 const DAMAGE_ACTION = "steadyStrikeDamage";
 
@@ -171,9 +173,13 @@ export function withStrikeUsage(Base) {
       return context;
     }
 
-    /** Hide or redirect the Attack and Damage buttons of a card (usage or strike). */
+    /** Hide used roll buttons; on attack cards, also redirect Damage to the card's attack. */
     strikeButtons(buttons, host) {
-      if ( !summariesOn() || (this.parent.getAssociatedActivity()?.type !== "attack") ) return buttons;
+      if ( !summariesOn() ) return buttons;
+      if ( this.parent.getAssociatedActivity()?.type !== "attack" ) {
+        const rolled = new Set(rollsOf(host).map(m => m.type));
+        return buttons.map(b => rolled.has(ONE_SHOT[b.action]) ? { ...b, hidden: true } : b);
+      }
       const open = openActions(host);
       return buttons.map(button => {
         if ( button.action === "rollAttack" ) return open.attack ? button : { ...button, hidden: true };

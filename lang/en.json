@@ -19,9 +19,11 @@
         "Type": {
           "use": "Item use",
           "attack": "Attacks",
-          "damage": "Damage and healing",
+          "damage": "Damage",
+          "healing": "Healing",
           "checks": "Checks and saves"
-        }
+        },
+        "All": "All"
       }
     }
   }

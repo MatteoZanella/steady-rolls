@@ -6,7 +6,7 @@
 import { MODULE_ID, TEMPLATES } from "./common.mjs";
 
 /** Roll types with their own fast-forward choice. */
-const ROLL_TYPES = ["use", "attack", "damage", "checks"];
+const ROLL_TYPES = ["use", "attack", "damage", "healing", "checks"];
 
 /** The key that opens the dialog of a fast-forwarded roll. */
 const DIALOG_KEY = "skipDialogNormal";
@@ -54,17 +54,17 @@ function wantsDialog(event) {
   return !!event && dnd5e.utils.areKeysPressed(event, DIALOG_KEY);
 }
 
-/** Fast-forward choice for a roll, from the hook names dnd5e gives it. */
-function rollType(hookNames = []) {
+/** Fast-forward choice for a roll, from the hook names dnd5e gives it and its message type. */
+function rollType(hookNames = [], message) {
   if ( hookNames.includes("attack") ) return "attack";
-  if ( hookNames.includes("damage") ) return "damage";
+  if ( hookNames.includes("damage") ) return (message?.data?.type === "healing") ? "healing" : "damage";
   if ( hookNames.includes("d20Test") ) return "checks";
   return null;
 }
 
 /** dnd5e.preRollV2: every dnd5e roll. */
 export function onPreRoll(config, dialog, message) {
-  const type = rollType(config.hookNames);
+  const type = rollType(config.hookNames, message);
   if ( !type || !fastForward(type) ) return;
   const shown = wantsDialog(config.event);
   // An attack rolled with its dialog shown gets its automatic damage dialog too.
@@ -85,7 +85,7 @@ class FastForwardConfig extends HandlebarsApplicationMixin(ApplicationV2) {
     id: "steady-strike-fast-forward",
     tag: "form",
     window: { title: "STEADY_STRIKE.Settings.FastForward.Name", contentClasses: ["standard-form"] },
-    position: { width: 480 },
+    position: { width: 560 },
     form: { handler: FastForwardConfig.#onSubmit, closeOnSubmit: true }
   };
 
@@ -104,6 +104,21 @@ class FastForwardConfig extends HandlebarsApplicationMixin(ApplicationV2) {
       })),
       buttons: [{ type: "submit", icon: "fa-solid fa-floppy-disk", label: "SETTINGS.Save" }]
     };
+  }
+
+  /** The "All" checkbox sets every column, and shows whether all, some or none are checked. */
+  _onRender(context, options) {
+    super._onRender(context, options);
+    const all = this.element.querySelector("input[data-all]");
+    const boxes = [...this.element.querySelectorAll(".steady-strike-column input[name]")];
+    const sync = () => {
+      const checked = boxes.filter(b => b.checked).length;
+      all.checked = checked === boxes.length;
+      all.indeterminate = (checked > 0) && (checked < boxes.length);
+    };
+    all.addEventListener("change", () => boxes.forEach(b => b.checked = all.checked));
+    boxes.forEach(b => b.addEventListener("change", sync));
+    sync();
   }
 
   static async #onSubmit(event, form, formData) {
