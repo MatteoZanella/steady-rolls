@@ -10,7 +10,7 @@
  */
 import { MODULE_ID, TEMPLATES } from "./common.mjs";
 import { isRolling, markRolling, onDiceSoNicePreProcess, playDice } from "./dice.mjs";
-import { onPostBuildAttack } from "./labels.mjs";
+import { labelBreakdowns, onPostBuildAttack } from "./labels.mjs";
 import { onPreRoll, onPreUseActivity, registerSettings } from "./settings.mjs";
 import {
   hostOf, onPreCreateMessage, onRollAttack, refreshCards,
@@ -24,7 +24,7 @@ const SUMMARY_TEMPLATES = {
   healing: `${TEMPLATES}/damage-summary.hbs`
 };
 
-/** Roll message data model with a summary template; tells templates if the dice still roll. */
+/** Roll message data model with a summary template; tells templates if the dice still roll; labels breakdowns. */
 function withSummaryTemplate(Base, summaryTemplate) {
   const Subclass = class extends Base {
     static metadata = Object.freeze(foundry.utils.mergeObject(super.metadata, { summaryTemplate }, { inplace: false }));
@@ -34,6 +34,12 @@ function withSummaryTemplate(Base, summaryTemplate) {
       const context = await super._prepareContext(options);
       context.steadyStrike = { rolling: isRolling(this.parent) };
       return context;
+    }
+
+    /** @inheritDoc */
+    _onRender(element, options) {
+      super._onRender(element, options);
+      if ( this.parent.type === "attack" ) labelBreakdowns(this.parent, element);
     }
   };
   Object.defineProperty(Subclass, "name", { value: `SteadyStrike${Base.name}` });

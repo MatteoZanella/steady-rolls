@@ -1,15 +1,16 @@
 /**
- * Names the parts of an attack breakdown, as term flavor (`@mod[CHA]`), which dnd5e's
- * breakdown already shows. The merged effect bonus (`@ruleBonus`) is split per effect only
- * when the pieces rebuild dnd5e's formula, so the total never changes. Damage is left alone:
- * there, flavor is the damage type.
+ * Names the parts of an attack breakdown. Labels are kept in the roll's options and written
+ * into the breakdown when it renders, so the formula itself stays untouched (no `[flavor]`
+ * in dialogs or for other modules). The merged effect bonus (`@ruleBonus`) is split per
+ * effect only when the pieces rebuild dnd5e's formula, so the total never changes.
  */
+import { MODULE_ID } from "./common.mjs";
+
 const PLAIN_NUMBER = /^\s*[+-]?\d+\s*$/;
 const SINGLE_TERM = /^\s*[+-]?[\w@.]+\s*$/;
 
 const localize = key => game.i18n.localize(key);
 const normalize = formula => String(formula ?? "").replace(/\s+/g, " ").trim();
-const clean = label => String(label ?? "").replace(/[[\]]/g, "").trim();
 
 /** Whether pieces add up to a formula: the same terms, in any order. */
 function sameSum(pieces, formula) {
@@ -19,7 +20,7 @@ function sameSum(pieces, formula) {
 
 /** Label for a named part that resolves to a plain number. */
 const LABELS = {
-  mod: ({ ability }) => CONFIG.DND5E.abilities[ability]?.abbreviation?.toUpperCase(),
+  mod: ({ ability }) => CONFIG.DND5E.abilities[ability]?.label,
   prof: () => localize("DND5E.Proficiency"),
   bonus: ({ activity }) => activity?.item?.name ?? localize("DND5E.Bonus"),
   weaponMagic: ({ activity }) => activity?.item?.name ?? localize("DND5E.MagicalBonus"),
@@ -68,9 +69,9 @@ function splitRuleBonus(activity, actor, ability, attackMode, rollData, formula)
   return sameSum(pieces, formula) ? pieces : null;
 }
 
-/** A labelled part; a formula is wrapped so the label covers all of it. */
-function labelled(formula, label) {
-  return SINGLE_TERM.test(formula) ? `${formula.trim()}[${label}]` : `(${formula})[${label}]`;
+/** A part as one term, so each part maps to one term of the roll. */
+function oneTerm(formula) {
+  return SINGLE_TERM.test(formula) ? formula.trim() : `(${formula})`;
 }
 
 /** dnd5e.postBuildAttackRollConfig: each time the attack's parts are built. */
@@ -83,21 +84,55 @@ export function onPostBuildAttack(process, config) {
   const ammunition = actor?.items.get(config.options?.ammunition ?? process.ammunition);
   const data = config.data ?? {};
 
-  config.parts = config.parts.flatMap(part => {
+  const parts = [];
+  const labels = [];
+  for ( const part of config.parts ) {
     const key = /^@(\w+)$/.exec(part)?.[1];
-    if ( !key ) return [part];
-    const value = foundry.utils.getProperty(data, key);
-
-    if ( (key === "ruleBonus") && actor && activity ) {
-      const pieces = splitRuleBonus(activity, actor, ability, attackMode, data, value);
-      if ( pieces?.length ) return pieces.map(p => labelled(p.formula, clean(p.label)));
-      const bonus = localize("DND5E.Bonus");
-      return [PLAIN_NUMBER.test(String(value)) ? `${part}[${bonus}]` : `(${part})[${bonus}]`];
+    const value = key ? foundry.utils.getProperty(data, key) : part;
+    const pieces = ((key === "ruleBonus") && actor && activity)
+      ? splitRuleBonus(activity, actor, ability, attackMode, data, value) : null;
+    if ( pieces?.length ) {
+      for ( const p of pieces ) {
+        parts.push(oneTerm(p.formula));
+        labels.push(p.label);
+      }
+      continue;
     }
+    parts.push(SINGLE_TERM.test(String(value)) ? part : `(${part})`);
+    // Only plain numbers get a label: a formula's terms do not map to one name.
+    const plain = PLAIN_NUMBER.test(String(value));
+    labels.push(!plain ? null : (key === "ruleBonus") ? localize("DND5E.Bonus")
+      : (LABELS[key]?.({ activity, ability, ammunition }) ?? null));
+  }
+  config.parts = parts;
+  foundry.utils.setProperty(config, `options.${MODULE_ID}.labels`, labels);
+}
 
-    // Other parts: only plain numbers (on a formula, the label would go on its last term).
-    if ( !PLAIN_NUMBER.test(String(value)) ) return [part];
-    const label = clean(LABELS[key]?.({ activity, ability, ammunition }));
-    return [label ? `${part}[${label}]` : part];
+/**
+ * Write a roll's labels into its breakdown: dice rows and constant rows, in roll order.
+ * Skipped when the roll's terms do not match the labels (e.g. a formula split into more terms).
+ * @param {ChatMessage5e} message
+ * @param {HTMLElement} element  The message's card or its summary.
+ */
+export function labelBreakdowns(message, element) {
+  const { NumericTerm, OperatorTerm } = foundry.dice.terms;
+  // Only this message's breakdowns, not those of rolls folded into it.
+  const own = element.matches?.(".card-summary") ? element : null;
+  const popovers = [...element.querySelectorAll(".roll-breakdown")]
+    .filter(p => p.closest(".card-summary") === own);
+  message.rolls.forEach((roll, i) => {
+    const labels = roll.options?.[MODULE_ID]?.labels;
+    const popover = popovers[i];
+    if ( !labels?.length || !popover ) return;
+    const terms = roll.terms.filter(t => !(t instanceof OperatorTerm));
+    if ( terms.length !== labels.length + 1 ) return; // The d20, then one term per part.
+    const labelOf = new Map(terms.slice(1).map((t, k) => [t, labels[k]]));
+    const write = (el, label) => { if ( el && label ) el.textContent = label; };
+    const diceRows = popover.querySelectorAll(".tooltip-part:not(.constant-term)");
+    roll.dice.forEach((die, k) => write(diceRows[k]?.querySelector(".total .label"), labelOf.get(die)));
+    const constants = terms.filter(t => (t instanceof NumericTerm) && t.total);
+    const constantRows = popover.querySelectorAll(".constant-term");
+    if ( constantRows.length !== constants.length ) return;
+    constants.forEach((t, k) => write(constantRows[k].querySelector(".flavor"), labelOf.get(t)));
   });
 }
