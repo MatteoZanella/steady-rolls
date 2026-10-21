@@ -5,15 +5,18 @@
  * the box only saves and checks have one. This module gives one to attack, damage and
  * healing, extending dnd5e's registered classes rather than patching them.
  * - strikes.mjs: one card per attack, card buttons, automatic damage
- * - dice.mjs: cards stay visible while Dice So Nice rolls
- * - settings.mjs, labels.mjs: settings, breakdown labels
+ * - modes.mjs: every d20 of a roll shown; advantage, disadvantage and critical switched after the roll
+ * - dice.mjs: results masked while Dice So Nice rolls
+ * - labels.mjs: names of the bonuses in d20 breakdowns
+ * - settings.mjs: fast-forward and automatic damage
  */
-import { MODULE_ID, TEMPLATES } from "./common.mjs";
-import { isRolling, markRolling, onDiceSoNicePreProcess, playDice } from "./dice.mjs";
-import { labelBreakdowns, onPostBuildAttack } from "./labels.mjs";
+import { MODULE_ID, TEMPLATES, named } from "./common.mjs";
+import { markRolling, maskRolling, onDiceSoNicePreProcess, playDice } from "./dice.mjs";
+import { labelBreakdowns, onPostBuildD20, onPreRollInitiative } from "./labels.mjs";
+import { decorateRolls, onPostBuildRoll, onPostDamageRollConfiguration } from "./modes.mjs";
 import { onPreRoll, onPreUseActivity, registerSettings } from "./settings.mjs";
 import {
-  hostOf, onPreCreateMessage, onRollAttack, refreshCards,
+  hostOf, onPostUseActivity, onPreCreateMessage, onRollAttack, refreshCards,
   withStrikeAttack, withStrikeCascade, withStrikeUsage
 } from "./strikes.mjs";
 
@@ -24,26 +27,12 @@ const SUMMARY_TEMPLATES = {
   healing: `${TEMPLATES}/damage-summary.hbs`
 };
 
-/** Roll message data model with a summary template; tells templates if the dice still roll; labels breakdowns. */
+/** Roll message data model with a summary template. */
 function withSummaryTemplate(Base, summaryTemplate) {
   const Subclass = class extends Base {
     static metadata = Object.freeze(foundry.utils.mergeObject(super.metadata, { summaryTemplate }, { inplace: false }));
-
-    /** @inheritDoc */
-    async _prepareContext(options) {
-      const context = await super._prepareContext(options);
-      context.steadyStrike = { rolling: isRolling(this.parent) };
-      return context;
-    }
-
-    /** @inheritDoc */
-    _onRender(element, options) {
-      super._onRender(element, options);
-      if ( this.parent.type === "attack" ) labelBreakdowns(this.parent, element);
-    }
   };
-  Object.defineProperty(Subclass, "name", { value: `SteadyStrike${Base.name}` });
-  return Subclass;
+  return named(Subclass, Base);
 }
 
 /** Whether dnd5e shows this message inside its usage card (as in ChatMessage5e#renderHTML). */
@@ -62,7 +51,7 @@ function notificationFor(messageId) {
 /** Chat log elements already followed by withFoldedRolls#_onRender. */
 const observed = new WeakSet();
 
-/** Chat log for cards whose rolls fold in: follows them as they grow, notifies them once. */
+/** Chat log for cards whose rolls fold in: follows them as they grow, stays put for their rolls, notifies them once. */
 function withFoldedRolls(Base) {
   const Subclass = class extends Base {
     /**
@@ -91,6 +80,16 @@ function withFoldedRolls(Base) {
     }
 
     /**
+     * A folded roll is shown in its card, wherever that is: no jump to the bottom of the log,
+     * which ChatLog makes for this user's own new messages. If the log was at the bottom, the
+     * observer above keeps it there as the card grows.
+     * @inheritDoc
+     */
+    postOne(message, options = {}) {
+      return super.postOne(message, isFolded(message) ? { ...options, scroll: options.scroll ?? false } : options);
+    }
+
+    /**
      * No notification for a folded roll while its card is in the notifications: the card
      * shows it. Restart the card's timer and play the roll's sound instead.
      * @override
@@ -98,51 +97,66 @@ function withFoldedRolls(Base) {
     notify(message, options = {}) {
       const host = (options.newMessage && isFolded(message)) ? hostOf(message) : null;
       const card = host ? notificationFor(host.id) : null;
-      if (!card) return super.notify(message, options);
-      if ("_lifeSpan" in card) card._lifeSpan = 0;
-      if (message.sound) game.audio.play(message.sound, { context: game.audio.interface });
+      if ( !card ) return super.notify(message, options);
+      if ( "_lifeSpan" in card ) card._lifeSpan = 0;
+      if ( message.sound ) game.audio.play(message.sound, { context: game.audio.interface });
     }
   };
-  Object.defineProperty(Subclass, "name", { value: `SteadyStrike${Base.name}` });
-  return Subclass;
+  return named(Subclass, Base);
 }
 
 /** Extend what is registered, so modules doing the same stack instead of replacing each other. */
 function register(config) {
   const models = config.ChatMessage?.dataModels;
-  if (!models?.usage?.prototype || !("rendersSummaries" in models.usage.prototype)) {
+  if ( !models?.usage?.prototype || !("rendersSummaries" in models.usage.prototype) ) {
     console.warn(`${MODULE_ID} | dnd5e card summaries not found; nothing registered.`);
     return false;
   }
-  for (const [type, template] of Object.entries(SUMMARY_TEMPLATES)) {
-    if (models[type]) models[type] = withSummaryTemplate(models[type], template);
+  for ( const [type, template] of Object.entries(SUMMARY_TEMPLATES) ) {
+    if ( models[type] ) models[type] = withSummaryTemplate(models[type], template);
   }
-  if (models.attack) models.attack = withStrikeAttack(models.attack);
+  if ( models.attack ) models.attack = withStrikeAttack(models.attack);
   models.usage = withStrikeUsage(models.usage);
-  if (config.ChatMessage.documentClass) {
+  if ( config.ChatMessage.documentClass ) {
     config.ChatMessage.documentClass = withStrikeCascade(config.ChatMessage.documentClass);
   }
-  if (config.ui?.chat) config.ui.chat = withFoldedRolls(config.ui.chat);
+  if ( config.ui?.chat ) config.ui.chat = withFoldedRolls(config.ui.chat);
   return true;
 }
 
 // dnd5e registers its classes in its own init hook, which runs first; CONFIG.ui is created later.
 Hooks.once("init", () => {
-  if (game.system.id !== "dnd5e") return;
+  if ( game.system.id !== "dnd5e" ) return;
   registerSettings();
-  if (!register(CONFIG)) return;
-  foundry.applications.handlebars.loadTemplates({ "steady-strike.rolling-roll": `${TEMPLATES}/rolling-roll.hbs` });
+  if ( !register(CONFIG) ) return;
   Hooks.on("preCreateChatMessage", onPreCreateMessage);
-  if (game.modules.get("dice-so-nice")?.active) {
+  // Every rendered message and the rolls folded into it: name breakdown parts, show the d20s and
+  // mode toggles, mask results still rolling. dnd5e renders its cards after renderChatMessageHTML.
+  Hooks.on("dnd5e.renderChatMessage", (message, html) => {
+    labelBreakdowns(message, html);
+    decorateRolls(message, html);
+    for ( const summary of html.querySelectorAll(".card-summary[data-message-id]") ) {
+      const folded = game.messages.get(summary.dataset.messageId);
+      if ( !folded ) continue;
+      labelBreakdowns(folded, summary);
+      decorateRolls(folded, summary, summary);
+    }
+    maskRolling(message, html);
+  });
+  if ( game.modules.get("dice-so-nice")?.active ) {
     Hooks.on("preCreateChatMessage", markRolling);
     Hooks.on("diceSoNiceMessagePreProcess", onDiceSoNicePreProcess);
     Hooks.on("createChatMessage", playDice);
   }
-  for (const event of ["createChatMessage", "updateChatMessage", "deleteChatMessage"]) {
+  for ( const event of ["createChatMessage", "updateChatMessage", "deleteChatMessage"] ) {
     Hooks.on(event, refreshCards);
   }
   Hooks.on("dnd5e.rollAttackV2", onRollAttack);
   Hooks.on("dnd5e.preRollV2", onPreRoll);
   Hooks.on("dnd5e.preUseActivity", onPreUseActivity);
-  Hooks.on("dnd5e.postBuildAttackRollConfig", onPostBuildAttack);
+  Hooks.on("dnd5e.postUseActivity", onPostUseActivity);
+  Hooks.on("dnd5e.postBuildD20TestRollConfig", onPostBuildD20);
+  Hooks.on("dnd5e.postBuildRollConfig", onPostBuildRoll);
+  Hooks.on("dnd5e.postDamageRollConfiguration", onPostDamageRollConfiguration);
+  Hooks.on("dnd5e.preRollInitiative", onPreRollInitiative);
 });

@@ -6,7 +6,7 @@
 import { MODULE_ID, TEMPLATES } from "./common.mjs";
 
 /** Roll types with their own fast-forward choice. */
-const ROLL_TYPES = ["use", "attack", "damage", "healing", "checks"];
+const ROLL_TYPES = ["use", "attack", "damage", "healing", "checks", "saves"];
 
 /** The key that opens the dialog of a fast-forwarded roll. */
 const DIALOG_KEY = "skipDialogNormal";
@@ -34,6 +34,15 @@ export function registerSettings() {
       always: "STEADY_STRIKE.Settings.AutoDamage.Always"
     }
   });
+  game.settings.register(MODULE_ID, "autoSaveDamage", {
+    name: "STEADY_STRIKE.Settings.AutoSaveDamage.Name",
+    hint: "STEADY_STRIKE.Settings.AutoSaveDamage.Hint",
+    scope: "client", config: true, type: Boolean, default: true
+  });
+  // Set in the fast-forward menu, under Item use.
+  game.settings.register(MODULE_ID, "useChoices", {
+    scope: "client", config: false, type: Boolean, default: true
+  });
 }
 
 export function fastForward(type) {
@@ -58,6 +67,7 @@ function wantsDialog(event) {
 function rollType(hookNames = [], message) {
   if ( hookNames.includes("attack") ) return "attack";
   if ( hookNames.includes("damage") ) return (message?.data?.type === "healing") ? "healing" : "damage";
+  if ( hookNames.some(name => name.toLowerCase() === "savingthrow") ) return "saves";
   if ( hookNames.includes("d20Test") ) return "checks";
   return null;
 }
@@ -72,9 +82,20 @@ export function onPreRoll(config, dialog, message) {
   dialog.configure ??= shown;
 }
 
+/**
+ * Whether using an activity asks for a choice in its dialog: a spell slot (a leveled spell, or a
+ * feature spending one, like Divine Smite), an amount of a resource (Lay on Hands), an order.
+ */
+function hasChoice(activity) {
+  return activity.canScale || (activity.type === "order")
+    || !!activity.consumption?.targets?.some(target => target.type === "spellSlots");
+}
+
 /** dnd5e.preUseActivity: the item use dialog. */
 export function onPreUseActivity(activity, usage, dialog) {
-  if ( fastForward("use") ) dialog.configure = wantsDialog(usage.event);
+  if ( !fastForward("use") ) return;
+  const choice = game.settings.get(MODULE_ID, "useChoices") && hasChoice(activity);
+  dialog.configure = choice || wantsDialog(usage.event);
 }
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -85,7 +106,7 @@ class FastForwardConfig extends HandlebarsApplicationMixin(ApplicationV2) {
     id: "steady-strike-fast-forward",
     tag: "form",
     window: { title: "STEADY_STRIKE.Settings.FastForward.Name", contentClasses: ["standard-form"] },
-    position: { width: 560 },
+    position: { width: 600 },
     form: { handler: FastForwardConfig.#onSubmit, closeOnSubmit: true }
   };
 
@@ -102,6 +123,7 @@ class FastForwardConfig extends HandlebarsApplicationMixin(ApplicationV2) {
       types: ROLL_TYPES.map(type => ({
         type, checked: !!values[type], label: `STEADY_STRIKE.Settings.FastForward.Type.${type}`
       })),
+      useChoices: game.settings.get(MODULE_ID, "useChoices"),
       buttons: [{ type: "submit", icon: "fa-solid fa-floppy-disk", label: "SETTINGS.Save" }]
     };
   }
@@ -116,14 +138,24 @@ class FastForwardConfig extends HandlebarsApplicationMixin(ApplicationV2) {
       all.checked = checked === boxes.length;
       all.indeterminate = (checked > 0) && (checked < boxes.length);
     };
-    all.addEventListener("change", () => boxes.forEach(b => b.checked = all.checked));
+    // The choices option only applies while item use skips its dialog.
+    const use = this.element.querySelector('input[name="use"]');
+    const choices = this.element.querySelector('input[name="useChoices"]');
+    const syncChoices = () => choices.disabled = !use.checked;
+    all.addEventListener("change", () => {
+      boxes.forEach(b => b.checked = all.checked);
+      syncChoices();
+    });
     boxes.forEach(b => b.addEventListener("change", sync));
+    use.addEventListener("change", syncChoices);
     sync();
+    syncChoices();
   }
 
   static async #onSubmit(event, form, formData) {
     const data = formData.object;
     await game.settings.set(MODULE_ID, "fastForward",
       Object.fromEntries(ROLL_TYPES.map(type => [type, !!data[type]])));
+    if ( data.useChoices !== undefined ) await game.settings.set(MODULE_ID, "useChoices", !!data.useChoices);
   }
 }

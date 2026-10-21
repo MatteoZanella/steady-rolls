@@ -7,7 +7,7 @@
  * Flags set at creation: `strike` (number) on attacks, `attack` (id of its attack) on damage.
  * dnd5e has no damage-to-attack link: its Damage button uses the latest attack.
  */
-import { DAMAGE_TYPES, MODULE_ID, TEMPLATES, hasDamage, isUsage } from "./common.mjs";
+import { DAMAGE_TYPES, MODULE_ID, TEMPLATES, hasDamage, isUsage, named } from "./common.mjs";
 import { diceLanded, releaseDice } from "./dice.mjs";
 
 const STRIKE_TEMPLATE = `${TEMPLATES}/strike-card.hbs`;
@@ -32,7 +32,7 @@ function latestStrike(usage) {
 }
 
 /** Whether an attack has its own card: any attack after the first. */
-export function isStrikeCard(message) {
+function isStrikeCard(message) {
   return summariesOn() && (message?.type === "attack") && isUsage(message.system?.origin)
     && (strikeNumber(message) > 1);
 }
@@ -92,8 +92,10 @@ export function onPreCreateMessage(message) {
  * the usage card; strike card buttons depend on the other attacks.
  */
 export function refreshCards(message, changes) {
-  // Dice landed: re-render the card showing the roll.
-  if ( foundry.utils.hasProperty(changes ?? {}, `flags.${MODULE_ID}`) && !message.getFlag(MODULE_ID, "rolling") ) {
+  // Roll switched, or dice landed: re-render the card showing the roll.
+  changes ??= {};
+  const landed = foundry.utils.hasProperty(changes, `flags.${MODULE_ID}`) && !message.getFlag(MODULE_ID, "rolling");
+  if ( landed || ("rolls" in changes) ) {
     const host = hostOf(message) ?? message;
     if ( game.messages.has(host.id) ) ui.chat?.updateMessage(host);
   }
@@ -200,8 +202,7 @@ export function withStrikeUsage(Base) {
       return context.buttonGroups;
     }
   };
-  Object.defineProperty(Subclass, "name", { value: `SteadyStrike${Base.name}` });
-  return Subclass;
+  return named(Subclass, Base);
 }
 
 /** Attack: attacks after the first render as their own card. */
@@ -232,8 +233,7 @@ export function withStrikeAttack(Base) {
       return context;
     }
   };
-  Object.defineProperty(Subclass, "name", { value: `SteadyStrike${Base.name}` });
-  return Subclass;
+  return named(Subclass, Base);
 }
 
 /** Chat message: deleting a card deletes everything it shows, strike cards included. */
@@ -252,8 +252,15 @@ export function withStrikeCascade(Base) {
       return super._preDeleteOperation(documents, operation, user);
     }
   };
-  Object.defineProperty(Subclass, "name", { value: `SteadyStrike${Base.name}` });
-  return Subclass;
+  return named(Subclass, Base);
+}
+
+/** dnd5e.postUseActivity: roll a save activity's damage with its card, if chosen (dnd5e waits for the button). */
+export function onPostUseActivity(activity, usageConfig, results) {
+  if ( (activity.type !== "save") || !activity.damage?.parts?.length ) return;
+  if ( !game.settings.get(MODULE_ID, "autoSaveDamage") || (usageConfig.subsequentActions === false) ) return;
+  const usage = results?.message;
+  if ( usage?.id && game.messages.has(usage.id) ) rollStrikeDamage(usage, null, usageConfig.event);
 }
 
 /** Automatic damage after an attack from a card. */

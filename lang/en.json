@@ -1,6 +1,5 @@
 {
   "STEADY_STRIKE": {
-    "Rolling": "Rolling…",
     "Settings": {
       "AutoDamage": {
         "Name": "Roll damage automatically",
@@ -8,6 +7,14 @@
         "Never": "Never",
         "Hit": "On hit",
         "Always": "Always"
+      },
+      "AutoSaveDamage": {
+        "Name": "Roll save damage automatically",
+        "Hint": "For save activities, such as Fireball. Off: roll it with the Damage button once the saves are made, so no one weighs the damage before saving."
+      },
+      "UseChoices": {
+        "Name": "Keep the item use dialog for choices",
+        "Hint": "While item use skips its dialog, still show it when there is something to choose: the spell slot of a leveled spell or of a feature like Divine Smite, how much of a resource to spend (Lay on Hands), or a facility order."
       },
       "FastForward": {
         "Name": "Fast-forward rolls",
@@ -21,7 +28,8 @@
           "attack": "Attacks",
           "damage": "Damage",
           "healing": "Healing",
-          "checks": "Checks and saves"
+          "checks": "Checks",
+          "saves": "Saves"
         },
         "All": "All"
       }

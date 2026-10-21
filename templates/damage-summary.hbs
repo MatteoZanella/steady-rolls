@@ -6,9 +6,6 @@
 {{!-- Property tags, as on the damage card. --}}
 {{> "dnd5e.card-rows" }}
 
-{{#if steadyStrike.rolling}}
-{{> "steady-strike.rolling-roll" icon="fa-dice-d6" }}
-{{else}}
 <section class="icon-row steady-strike-roll">
     <i class="fa-fw fa-solid fa-dice" aria-label="{{ localize "DND5E.CHATMESSAGE.Row.Roll" }}"></i>
     <button type="button" class="dice-roll" {{ disabled isPrivate }}>
@@ -23,5 +20,4 @@
 
 {{#if showTray}}
 <damage-application class="dnd5e2"></damage-application>
-{{/if}}
 {{/if}}

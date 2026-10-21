@@ -20,7 +20,7 @@
     <ul class="unlist targets pills">
         {{#each targets}}
         <li>
-            <target-pill {{#if showResult}}{{#unless @root.steadyStrike.rolling}}{{ ifThen isMiss "data-miss" "data-hit" }}{{/unless}}{{/if}}
+            <target-pill {{#if showResult}}{{ ifThen isMiss "data-miss" "data-hit" }}{{/if}}
                 {{#if showAC}}data-value="{{ ifThen hasAC ac "∞" }}"{{/if}}>
                 <label>{{ name }}</label>
                 <datalist>
@@ -34,13 +34,9 @@
 {{/if}}
 
 {{!-- As dnd5e.card-rolls, marked to keep the roll's card look. --}}
-{{#if steadyStrike.rolling}}
-{{> "steady-strike.rolling-roll" icon="fa-dice-d20" }}
-{{else}}
 {{#each rolls}}
 <section class="icon-row steady-strike-roll">
     <i class="fa-fw fa-solid fa-dice" aria-label="{{ localize "DND5E.CHATMESSAGE.Row.Roll" }}"></i>
     {{{ this }}}
 </section>
 {{/each}}
-{{/if}}

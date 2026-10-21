@@ -80,6 +80,122 @@
   margin: 0;
 }
 
+/* The total's gold lines, half dnd5e's 28px. */
+:is(.chat-log, .chat-popout) .message.compact .dice-roll .result > .total::before,
+:is(.chat-log, .chat-popout) .message.compact .dice-roll .result > .total::after {
+  inline-size: 14px;
+}
+
+/*
+ * A roll's bar with its mode toggles: advantage and disadvantage either side of the total, at
+ * the end of its gold lines (26px frame, 14px lines); critical at the start. Siblings of the
+ * roll button, so they neither open nor highlight it. Only the toggles that are on show at
+ * rest; all show while the bar is hovered or focused.
+ */
+:is(.chat-log, .chat-popout) .message.compact .steady-strike-bar {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  gap: 4px;
+  position: relative;
+}
+:is(.chat-log, .chat-popout) .message.compact .steady-strike-mode {
+  background: none;
+  block-size: auto;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-14);
+  inline-size: auto;
+  inset-block-start: 50%;
+  line-height: 1;
+  opacity: 0;
+  padding: 0;
+  position: absolute;
+  translate: 0 -50%;
+  z-index: 1;
+}
+/* A larger click area than the icon, without moving it. */
+:is(.chat-log, .chat-popout) .message.compact .steady-strike-mode::after {
+  content: "";
+  inset: -6px -8px;
+  position: absolute;
+}
+:is(.chat-log, .chat-popout) .message.compact .steady-strike-mode.before {
+  inset-inline-end: calc(50% + 31px);
+}
+:is(.chat-log, .chat-popout) .message.compact .steady-strike-mode.after {
+  inset-inline-start: calc(50% + 31px);
+}
+:is(.chat-log, .chat-popout) .message.compact .steady-strike-bar:is(:hover, :focus-within) .steady-strike-mode {
+  opacity: 0.45;
+}
+:is(.chat-log, .chat-popout) .message.compact .steady-strike-bar .steady-strike-mode:is(
+  :hover, :focus-visible, [aria-pressed="true"]) {
+  box-shadow: none;
+  opacity: 1;
+}
+:is(.chat-log, .chat-popout) .message.compact .steady-strike-mode[aria-pressed="true"] {
+  color: var(--dnd5e-color-gold);
+}
+/* The critical toggle is a status: at the bar's start, where dnd5e shows a roll's outcome icons,
+   and green when on, as dnd5e marks criticals. */
+:is(.chat-log, .chat-popout) .message.compact .steady-strike-mode.critical {
+  inset-inline-end: auto;
+  inset-inline-start: 8px;
+}
+:is(.chat-log, .chat-popout) .message.compact .steady-strike-mode.critical:is([aria-pressed="true"], span) {
+  color: var(--color-level-success);
+  opacity: 1;
+}
+/* Native summaries (saves, checks) show only the total, at the row's end: toggles beside it. */
+:is(.chat-log, .chat-popout) .message.compact .card-summary .icon-row:not(.steady-strike-roll)
+  .steady-strike-mode {
+  inset: auto;
+  position: relative; /* Holds its click area. */
+  translate: none;
+}
+
+/*
+ * Every d20 of a roll with more than one, the kept one in full, the others greyed. Each number
+ * is centred on its die: the line box is trimmed to the digits (cap height to baseline), so the
+ * centring does not depend on the font's ascent and descent, which differ between platforms.
+ * The transformed (rotated) die paints above static content, so the number is positioned.
+ */
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die.steady-strike-d20s {
+  padding-block-start: 0;
+}
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-strike-d20 {
+  display: inline-grid;
+  padding-block-start: 3px;
+  place-items: center;
+}
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-strike-d20 + .steady-strike-d20 {
+  margin-inline-start: 2px;
+}
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-strike-d20 > * {
+  grid-area: 1 / 1;
+}
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-strike-d20 > i {
+  color: var(--dnd5e-chat-color-die);
+  font-size: var(--font-size-16);
+}
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-strike-d20 .roll {
+  inset: auto;
+  letter-spacing: 0;
+  line-height: 1;
+  position: relative;
+  text-box: trim-both cap alphabetic;
+}
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-strike-d20.dropped {
+  opacity: 0.35;
+}
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll.critical .steady-strike-d20:not(.dropped) > i {
+  color: var(--color-level-success);
+}
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll.fumble .steady-strike-d20:not(.dropped) > i {
+  color: var(--color-level-error);
+}
+
 /* Dice still rolling: a tumbling die in the total's frame, sized like a number. */
 :is(.chat-log, .chat-popout) .message.compact button.dice-roll.steady-strike-rolling {
   cursor: progress;
@@ -91,11 +207,31 @@
   display: inline-block;
   font-size: 0.75em;
 }
+/* A d20 still rolling: its die tumbles, without its number. */
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .steady-strike-tumbling > i {
+  animation: steady-strike-tumble 1.2s linear infinite;
+}
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .steady-strike-tumbling .roll {
+  visibility: hidden;
+}
+/* In the breakdown: a new die still rolling tumbles, and the total it changes is a tumbling d20. */
+:is(.chat-log, .chat-popout) .message .roll-breakdown li.roll.steady-strike-tumbling,
+:is(.chat-log, .chat-popout) .message .roll-breakdown .steady-strike-spinner {
+  animation: steady-strike-tumble 1.2s linear infinite;
+}
+:is(.chat-log, .chat-popout) .message .roll-breakdown .steady-strike-spinner {
+  color: var(--color-text-primary);
+  display: inline-block;
+  font-size: 0.8em;
+}
 @keyframes steady-strike-tumble {
   to { transform: rotate(360deg); }
 }
 @media (prefers-reduced-motion: reduce) {
-  :is(.chat-log, .chat-popout) .message.compact button.dice-roll.steady-strike-rolling .total i {
+  :is(.chat-log, .chat-popout) .message.compact button.dice-roll.steady-strike-rolling .total i,
+  :is(.chat-log, .chat-popout) .message.compact button.dice-roll .steady-strike-tumbling > i,
+  :is(.chat-log, .chat-popout) .message .roll-breakdown li.roll.steady-strike-tumbling,
+  :is(.chat-log, .chat-popout) .message .roll-breakdown .steady-strike-spinner {
     animation: none;
   }
 }

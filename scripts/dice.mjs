@@ -5,8 +5,11 @@
  * dice everywhere (`animateRoll`), then clears the mark, which re-renders the cards.
  * "Always" automatic damage is thrown together with its attack.
  */
-import { DAMAGE_TYPES, MODULE_ID, hasDamage, isUsage } from "./common.mjs";
+import { MODULE_ID, hasDamage } from "./common.mjs";
 import { fastForward } from "./settings.mjs";
+
+/** Rolls masked while their dice roll. Recharges are left out: their flavor tells the result. */
+const MASKED_TYPES = new Set(["attack", "check", "save", "damage", "healing", "generic", "hitDie", "hitPoints"]);
 
 /** Marks older than this are ignored, in case the rolling client left mid-roll. */
 const MAX_AGE = 30_000;
@@ -15,21 +18,77 @@ const MAX_AGE = 30_000;
 const playing = new Map();
 
 /** Whether Dice So Nice holds back roll results on this client. */
-function diceSoNiceHides() {
+export function diceSoNiceHides() {
   return !!game.dice3d && !game.settings.get("dice-so-nice", "immediatelyDisplayChatMessages");
 }
 
-/** Whether a roll's result is still masked. */
+/** Whether a roll's result is still masked. The mark is the server time it was set. */
 export function isRolling(message) {
-  return !!message?.getFlag(MODULE_ID, "rolling") && ((Date.now() - message.timestamp) < MAX_AGE);
+  const since = message?.getFlag(MODULE_ID, "rolling");
+  return Number.isFinite(since) && ((game.time.serverTime - since) < MAX_AGE);
 }
 
 /** preCreateChatMessage: mark the roll, and drop the dice sound as Dice So Nice does. */
 export function markRolling(message) {
-  if ( !diceSoNiceHides() || !isUsage(message.system?.origin) ) return;
-  if ( (message.type !== "attack") && !DAMAGE_TYPES.has(message.type) ) return;
+  if ( !diceSoNiceHides() || !MASKED_TYPES.has(message.type) ) return;
   if ( !message.rolls.some(roll => roll.dice.length) ) return;
-  message.updateSource({ [`flags.${MODULE_ID}.rolling`]: true, sound: null });
+  message.updateSource({ [`flags.${MODULE_ID}.rolling`]: game.time.serverTime, sound: null });
+}
+
+/** dnd5e.renderChatMessage: mask the results still rolling, of the message and of the rolls folded into it. */
+export function maskRolling(message, html) {
+  if ( isRolling(message) ) mask(message, html, null);
+  for ( const summary of html.querySelectorAll(".card-summary[data-message-id]") ) {
+    const folded = game.messages.get(summary.dataset.messageId);
+    if ( isRolling(folded) ) mask(folded, summary, summary);
+  }
+}
+
+/**
+ * Hide a roll's results inside `root`, leaving those of other rolls folded into it (`own`: their
+ * summary). After a switch (modes.mjs), only the switched rolls are masked, and of their dice
+ * only the new ones roll, in the bar and in the breakdown, which stays; otherwise every roll
+ * and die is, and the breakdown is removed.
+ */
+function mask(message, root, own) {
+  const mine = selector => [...root.querySelectorAll(selector)].filter(el => el.closest(".card-summary") === own);
+  const buttons = mine("button.dice-roll");
+  const switched = buttons.filter(b => b.matches("[data-steady-strike-switched]"));
+  for ( const button of switched.length ? switched : buttons ) {
+    button.classList.remove("success", "failure", "critical", "fumble");
+    button.classList.add("steady-strike-rolling");
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.querySelector(".icons")?.replaceChildren();
+    const d20 = button.querySelector(".d20die");
+    if ( d20 ) {
+      const dice = d20.matches(".steady-strike-d20s") ? [...d20.children] : [d20];
+      dice.forEach(d => d.classList.remove("dropped")); // Which die is kept is not known yet.
+      const rolling = switched.length ? dice.filter(d => d.matches("[data-steady-strike-new]")) : dice;
+      rolling.forEach(d => d.classList.add("steady-strike-tumbling"));
+    }
+    const total = button.querySelector(".total");
+    if ( total ) total.innerHTML = `<i class="fa-solid ${d20 ? "fa-dice-d20" : "fa-dice-d6"}" inert></i>\u200b`;
+  }
+  for ( const pill of mine("target-pill") ) {
+    pill.removeAttribute("data-hit");
+    pill.removeAttribute("data-miss");
+  }
+  // In the breakdown, a new die tumbles without its number, and so does its part's total.
+  for ( const part of switched.length ? mine(".roll-breakdown [data-steady-strike-new].tooltip-part") : [] ) {
+    part.querySelectorAll("li.roll").forEach(li => li.classList.remove("discarded"));
+    part.querySelectorAll("li.roll[data-steady-strike-new]").forEach(li => {
+      li.classList.remove("min", "max"); // Their colours tell the result.
+      li.classList.add("steady-strike-tumbling");
+      li.textContent = "\u00a0";
+    });
+    const value = part.querySelector(".total .value");
+    if ( value ) value.innerHTML = '<i class="fa-regular fa-dice-d20 steady-strike-spinner" inert></i>';
+  }
+  // Breakdowns, applied damage and outcomes (death saves, resisted, recovered hit points).
+  const outcomes = [...(switched.length ? [] : [".roll-breakdown"]), "damage-application", ".deltas"];
+  if ( message.type === "save" ) outcomes.push(".supplement");
+  mine(outcomes.join(", ")).forEach(el => el.remove());
 }
 
 /** diceSoNiceMessagePreProcess: Steady Strike plays the dice of marked rolls. */
@@ -67,12 +126,11 @@ export function releaseDice(attack) {
   if ( waiting.delete(attack?.id) ) throwDice([attack]);
 }
 
-/** One throw for several messages, then reveal them together. */
-function throwDice(messages) {
-  const dice = messages.flatMap(m => m.rolls.flatMap(roll => roll.dice));
+/** One throw for several messages (all their dice, unless given), then reveal them together. */
+export function throwDice(messages, dice = messages.flatMap(m => m.rolls.flatMap(roll => roll.dice))) {
   const animation = game.dice3d.animateRoll({ dice }, messages[0])
     .catch(err => console.error(`${MODULE_ID} | Dice So Nice animation failed`, err))
-    .then(() => Promise.all(messages.filter(m => game.messages.has(m.id))
+    .then(() => Promise.all(messages.filter(m => game.messages.has(m.id) && m.getFlag(MODULE_ID, "rolling"))
       .map(m => m.unsetFlag(MODULE_ID, "rolling"))))
     .finally(() => messages.forEach(m => playing.delete(m.id)));
   for ( const m of messages ) playing.set(m.id, animation);

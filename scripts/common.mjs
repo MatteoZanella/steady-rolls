@@ -14,3 +14,9 @@ export function isUsage(message) {
 export function hasDamage(activity) {
   return !!activity?.damage?.parts?.length || !!activity?.item?.system.properties?.has("amm");
 }
+
+/** Name a subclass after its base, for readable stacks and class names. */
+export function named(Subclass, Base) {
+  Object.defineProperty(Subclass, "name", { value: `SteadyStrike${Base.name}` });
+  return Subclass;
+}
