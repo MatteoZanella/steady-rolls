@@ -1,5 +1,12 @@
 {
   "STEADY_STRIKE": {
+    "Again": {
+      "attack": "Attack again",
+      "damage": "Damage again, on its own card",
+      "healing": "Healing again, on its own card"
+    },
+    "Changed": "The roll changed meanwhile: try again.",
+    "CriticalFixed": "Critical can't be switched: another module changed this damage after it was built.",
     "Settings": {
       "AutoDamage": {
         "Name": "Roll damage automatically",
@@ -32,7 +39,28 @@
           "saves": "Saves"
         },
         "All": "All"
+      },
+      "Rerolls": {
+        "Name": "Rerolls",
+        "Hint": "Who can click a die in a roll's breakdown to roll it again. The new result is used; an info card in chat shows the change and can undo it.",
+        "Off": "No one",
+        "GM": "GM only",
+        "Owner": "GM and the roll's owner"
       }
+    },
+    "Reroll": {
+      "Action": "Reroll this die",
+      "GoBack": "Go back to {value}",
+      "Card": "{user} rerolled a d{faces} ({label}): {old} → {new}",
+      "Done": "d{faces} rerolled",
+      "Undone": "d{faces} reroll undone",
+      "Undo": "Undo the reroll",
+      "CannotUndo": "This reroll can't be undone: the die has changed since, or the roll can't be changed now."
+    }
+  },
+  "TYPES": {
+    "ChatMessage": {
+      "steady-strike.reroll": "Reroll"
     }
   }
 }

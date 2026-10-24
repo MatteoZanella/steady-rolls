@@ -6,6 +6,7 @@
  * total never changes.
  */
 import { MODULE_ID } from "./common.mjs";
+import { breakdownsOf } from "./rebuild.mjs";
 
 const PLAIN_NUMBER = /^\s*[+-]?\d+\s*$/;
 const SINGLE_TERM = /^\s*[+-]?[\w@.]+\s*$/;
@@ -93,7 +94,9 @@ function splitField(actor, path) {
   if ( base ) pieces.push({ formula: String(base), label: localize("DND5E.Bonus") });
   for ( const effect of actor.appliedEffects ?? [] ) {
     for ( let change of effect.system?.changes ?? effect.changes ?? [] ) {
-      // Old keys (system.bonuses.rsak.attack) apply to the new fields.
+      // Old keys (system.bonuses.rsak.attack) apply to the new fields: dnd5e maps them only while
+      // applying (its protected _applyChangeShim, no public equivalent). Without it, such a bonus
+      // is left unsplit, under a generic label.
       change = effect._applyChangeShim?.(change) ?? change;
       if ( (change.key === key) && ((change.type ?? "add") === "add") && change.value ) {
         pieces.push({ formula: String(change.value), label: effect.name });
@@ -171,14 +174,12 @@ export function onPreRollInitiative(actor, roll) {
  * Write a roll's labels into its breakdown: dice rows and constant rows, in roll order.
  * Skipped when the roll's terms do not match the labels (e.g. a formula split into more terms).
  * @param {ChatMessage5e} message
- * @param {HTMLElement} element  The message's card or its summary.
+ * @param {HTMLElement} root           The message's card, or its summary in another card.
+ * @param {HTMLElement|null} [own]     That summary: only this message's breakdowns are labelled.
  */
-export function labelBreakdowns(message, element) {
+export function labelBreakdowns(message, root, own = null) {
   const { NumericTerm, OperatorTerm } = foundry.dice.terms;
-  // Only this message's breakdowns, not those of rolls folded into it.
-  const own = element.matches?.(".card-summary") ? element : null;
-  const popovers = [...element.querySelectorAll(".roll-breakdown")]
-    .filter(p => p.closest(".card-summary") === own);
+  const popovers = breakdownsOf(root, own);
   message.rolls.forEach((roll, i) => {
     const labels = roll.options?.[MODULE_ID]?.labels;
     const popover = popovers[i];

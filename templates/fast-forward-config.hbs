@@ -15,11 +15,12 @@
             {{/each}}
         </div>
         <div class="form-group">
-            <label for="steady-strike-use-choices">{{ localize "STEADY_STRIKE.Settings.UseChoices.Name" }}</label>
+            <label for="steady-strike-use-choices">{{ localize useChoices.label }}</label>
             <div class="form-fields">
-                <input type="checkbox" id="steady-strike-use-choices" name="useChoices" {{ checked useChoices }}>
+                <input type="checkbox" id="steady-strike-use-choices" name="useChoices"
+                       {{ checked useChoices.checked }}>
             </div>
-            <p class="hint">{{ localize "STEADY_STRIKE.Settings.UseChoices.Hint" }}</p>
+            <p class="hint">{{ localize useChoices.hint }}</p>
         </div>
     </fieldset>
 </section>

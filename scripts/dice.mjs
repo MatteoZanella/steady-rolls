@@ -35,26 +35,19 @@ export function markRolling(message) {
   message.updateSource({ [`flags.${MODULE_ID}.rolling`]: game.time.serverTime, sound: null });
 }
 
-/** dnd5e.renderChatMessage: mask the results still rolling, of the message and of the rolls folded into it. */
-export function maskRolling(message, html) {
-  if ( isRolling(message) ) mask(message, html, null);
-  for ( const summary of html.querySelectorAll(".card-summary[data-message-id]") ) {
-    const folded = game.messages.get(summary.dataset.messageId);
-    if ( isRolling(folded) ) mask(folded, summary, summary);
-  }
-}
-
 /**
- * Hide a roll's results inside `root`, leaving those of other rolls folded into it (`own`: their
- * summary). After a switch (modes.mjs), only the switched rolls are masked, and of their dice
- * only the new ones roll, in the bar and in the breakdown, which stays; otherwise every roll
- * and die is, and the breakdown is removed.
+ * dnd5e.renderChatMessage: hide a message's results while its dice roll, inside `root` (its card,
+ * or its summary in another card: `own`), leaving those of other rolls folded into it. After a
+ * switch or a reroll (modes.mjs, rerolls.mjs), only the changed rolls are masked, and of their
+ * dice only the new ones roll, in the bar and in the breakdown, which stays; otherwise every
+ * roll and die is, and the breakdown is removed.
  */
-function mask(message, root, own) {
+export function maskRolling(message, root, own = null) {
+  if ( !isRolling(message) ) return;
   const mine = selector => [...root.querySelectorAll(selector)].filter(el => el.closest(".card-summary") === own);
   const buttons = mine("button.dice-roll");
-  const switched = buttons.filter(b => b.matches("[data-steady-strike-switched]"));
-  for ( const button of switched.length ? switched : buttons ) {
+  const changed = buttons.filter(b => b.matches("[data-steady-strike-changed]"));
+  for ( const button of changed.length ? changed : buttons ) {
     button.classList.remove("success", "failure", "critical", "fumble");
     button.classList.add("steady-strike-rolling");
     button.disabled = true;
@@ -64,7 +57,7 @@ function mask(message, root, own) {
     if ( d20 ) {
       const dice = d20.matches(".steady-strike-d20s") ? [...d20.children] : [d20];
       dice.forEach(d => d.classList.remove("dropped")); // Which die is kept is not known yet.
-      const rolling = switched.length ? dice.filter(d => d.matches("[data-steady-strike-new]")) : dice;
+      const rolling = changed.length ? dice.filter(d => d.matches("[data-steady-strike-new]")) : dice;
       rolling.forEach(d => d.classList.add("steady-strike-tumbling"));
     }
     const total = button.querySelector(".total");
@@ -75,7 +68,7 @@ function mask(message, root, own) {
     pill.removeAttribute("data-miss");
   }
   // In the breakdown, a new die tumbles without its number, and so does its part's total.
-  for ( const part of switched.length ? mine(".roll-breakdown [data-steady-strike-new].tooltip-part") : [] ) {
+  for ( const part of changed.length ? mine(".roll-breakdown [data-steady-strike-new].tooltip-part") : [] ) {
     part.querySelectorAll("li.roll").forEach(li => li.classList.remove("discarded"));
     part.querySelectorAll("li.roll[data-steady-strike-new]").forEach(li => {
       li.classList.remove("min", "max"); // Their colours tell the result.
@@ -86,7 +79,7 @@ function mask(message, root, own) {
     if ( value ) value.innerHTML = '<i class="fa-regular fa-dice-d20 steady-strike-spinner" inert></i>';
   }
   // Breakdowns, applied damage and outcomes (death saves, resisted, recovered hit points).
-  const outcomes = [...(switched.length ? [] : [".roll-breakdown"]), "damage-application", ".deltas"];
+  const outcomes = [...(changed.length ? [] : [".roll-breakdown"]), "damage-application", ".deltas"];
   if ( message.type === "save" ) outcomes.push(".supplement");
   mine(outcomes.join(", ")).forEach(el => el.remove());
 }

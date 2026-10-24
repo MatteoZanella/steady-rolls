@@ -1,5 +1,5 @@
 /**
- * Settings: fast-forward per roll type, and automatic damage.
+ * Settings: fast-forward per roll type (one setting, typed by its schema), automatic damage, rerolls.
  * Fast-forward is set in dnd5e's pre-roll hooks, which run before dnd5e reads its skip-dialog
  * keys (`dialog.configure ??=`); the skip-dialog key then shows the dialog instead.
  */
@@ -11,11 +11,21 @@ const ROLL_TYPES = ["use", "attack", "damage", "healing", "checks", "saves"];
 /** The key that opens the dialog of a fast-forwarded roll. */
 const DIALOG_KEY = "skipDialogNormal";
 
-export function registerSettings() {
-  game.settings.register(MODULE_ID, "fastForward", {
-    scope: "client", config: false, type: Object,
-    default: Object.fromEntries(ROLL_TYPES.map(type => [type, false]))
+/** Fast-forward choices: whether each roll type skips its dialog, and the item use exception. */
+function fastForwardSchema() {
+  const { BooleanField, SchemaField } = foundry.data.fields;
+  return new SchemaField({
+    ...Object.fromEntries(ROLL_TYPES.map(type => [type, new BooleanField({
+      label: `STEADY_STRIKE.Settings.FastForward.Type.${type}`
+    })])),
+    useChoices: new BooleanField({
+      initial: true, label: "STEADY_STRIKE.Settings.UseChoices.Name", hint: "STEADY_STRIKE.Settings.UseChoices.Hint"
+    })
   });
+}
+
+export function registerSettings() {
+  game.settings.register(MODULE_ID, "fastForward", { scope: "client", config: false, type: fastForwardSchema() });
   game.settings.registerMenu(MODULE_ID, "fastForwardMenu", {
     name: "STEADY_STRIKE.Settings.FastForward.Name",
     label: "STEADY_STRIKE.Settings.FastForward.Label",
@@ -39,14 +49,21 @@ export function registerSettings() {
     hint: "STEADY_STRIKE.Settings.AutoSaveDamage.Hint",
     scope: "client", config: true, type: Boolean, default: true
   });
-  // Set in the fast-forward menu, under Item use.
-  game.settings.register(MODULE_ID, "useChoices", {
-    scope: "client", config: false, type: Boolean, default: true
+  game.settings.register(MODULE_ID, "rerolls", {
+    name: "STEADY_STRIKE.Settings.Rerolls.Name",
+    hint: "STEADY_STRIKE.Settings.Rerolls.Hint",
+    scope: "world", config: true, type: String, default: "owner",
+    choices: {
+      off: "STEADY_STRIKE.Settings.Rerolls.Off",
+      gm: "STEADY_STRIKE.Settings.Rerolls.GM",
+      owner: "STEADY_STRIKE.Settings.Rerolls.Owner"
+    }
   });
 }
 
-export function fastForward(type) {
-  return !!game.settings.get(MODULE_ID, "fastForward")?.[type];
+/** A fast-forward choice: a roll type, or "useChoices". */
+export function fastForward(choice) {
+  return !!game.settings.get(MODULE_ID, "fastForward")[choice];
 }
 
 /** The keys bound to a dnd5e action, with left and right modifier keys named once ("Shift"). */
@@ -94,7 +111,7 @@ function hasChoice(activity) {
 /** dnd5e.preUseActivity: the item use dialog. */
 export function onPreUseActivity(activity, usage, dialog) {
   if ( !fastForward("use") ) return;
-  const choice = game.settings.get(MODULE_ID, "useChoices") && hasChoice(activity);
+  const choice = fastForward("useChoices") && hasChoice(activity);
   dialog.configure = choice || wantsDialog(usage.event);
 }
 
@@ -117,13 +134,12 @@ class FastForwardConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** @override */
   async _prepareContext() {
-    const values = game.settings.get(MODULE_ID, "fastForward") ?? {};
+    const values = game.settings.get(MODULE_ID, "fastForward");
+    const { fields } = game.settings.settings.get(`${MODULE_ID}.fastForward`).type;
     return {
       key: keyLabel(DIALOG_KEY),
-      types: ROLL_TYPES.map(type => ({
-        type, checked: !!values[type], label: `STEADY_STRIKE.Settings.FastForward.Type.${type}`
-      })),
-      useChoices: game.settings.get(MODULE_ID, "useChoices"),
+      types: ROLL_TYPES.map(type => ({ type, checked: values[type], label: fields[type].label })),
+      useChoices: { checked: values.useChoices, label: fields.useChoices.label, hint: fields.useChoices.hint },
       buttons: [{ type: "submit", icon: "fa-solid fa-floppy-disk", label: "SETTINGS.Save" }]
     };
   }
@@ -152,10 +168,9 @@ class FastForwardConfig extends HandlebarsApplicationMixin(ApplicationV2) {
     syncChoices();
   }
 
+  /** A disabled checkbox is not submitted: useChoices keeps its value while Item use is off. */
   static async #onSubmit(event, form, formData) {
-    const data = formData.object;
-    await game.settings.set(MODULE_ID, "fastForward",
-      Object.fromEntries(ROLL_TYPES.map(type => [type, !!data[type]])));
-    if ( data.useChoices !== undefined ) await game.settings.set(MODULE_ID, "useChoices", !!data.useChoices);
+    const value = { ...game.settings.get(MODULE_ID, "fastForward"), ...formData.object };
+    await game.settings.set(MODULE_ID, "fastForward", value);
   }
 }

@@ -4,20 +4,24 @@
  * dnd5e folds into a usage card every roll whose data model has a `summaryTemplate`; out of
  * the box only saves and checks have one. This module gives one to attack, damage and
  * healing, extending dnd5e's registered classes rather than patching them.
- * - strikes.mjs: one card per attack, card buttons, automatic damage
+ * - strikes.mjs: one card per attack, damage-only cards, card buttons, automatic damage
  * - modes.mjs: every d20 of a roll shown; advantage, disadvantage and critical switched after the roll
+ * - rerolls.mjs: a die rolled again from the breakdown, with an info card; undone from either
+ * - rebuild.mjs: rolls rebuilt with their dice kept and changed one at a time, for both
  * - dice.mjs: results masked while Dice So Nice rolls
  * - labels.mjs: names of the bonuses in d20 breakdowns
- * - settings.mjs: fast-forward and automatic damage
+ * - settings.mjs: settings and the fast-forward menu
  */
 import { MODULE_ID, TEMPLATES, named } from "./common.mjs";
 import { markRolling, maskRolling, onDiceSoNicePreProcess, playDice } from "./dice.mjs";
 import { labelBreakdowns, onPostBuildD20, onPreRollInitiative } from "./labels.mjs";
-import { decorateRolls, onPostBuildRoll, onPostDamageRollConfiguration } from "./modes.mjs";
+import { decorateRolls } from "./modes.mjs";
+import { onPostBuildRoll, onPostDamageRollConfiguration } from "./rebuild.mjs";
+import { REROLL_TYPE, decorateRerolls, refreshRerollCards, rerollCardModel } from "./rerolls.mjs";
 import { onPreRoll, onPreUseActivity, registerSettings } from "./settings.mjs";
 import {
-  hostOf, onPostUseActivity, onPreCreateMessage, onRollAttack, refreshCards,
-  withStrikeAttack, withStrikeCascade, withStrikeUsage
+  addOwnCardButtons, hostOf, onPostUseActivity, onPreCreateMessage, onRollAttack, refreshCards,
+  withOwnCard, withStrikeAttack, withStrikeCascade, withStrikeUsage
 } from "./strikes.mjs";
 
 /** Summary template per roll message type. Healing has the damage card's layout. */
@@ -33,6 +37,17 @@ function withSummaryTemplate(Base, summaryTemplate) {
     static metadata = Object.freeze(foundry.utils.mergeObject(super.metadata, { summaryTemplate }, { inplace: false }));
   };
   return named(Subclass, Base);
+}
+
+/**
+ * A message's rolls inside `root` (its card, or its summary in another card: `own`): breakdown
+ * labels, d20s and mode toggles, rerolls, and masking while dice roll.
+ */
+function decorate(message, root, own = null) {
+  labelBreakdowns(message, root, own);
+  decorateRolls(message, root, own);
+  decorateRerolls(message, root, own);
+  maskRolling(message, root, own);
 }
 
 /** Whether dnd5e shows this message inside its usage card (as in ChatMessage5e#renderHTML). */
@@ -116,7 +131,9 @@ function register(config) {
     if ( models[type] ) models[type] = withSummaryTemplate(models[type], template);
   }
   if ( models.attack ) models.attack = withStrikeAttack(models.attack);
+  for ( const type of ["damage", "healing"] ) if ( models[type] ) models[type] = withOwnCard(models[type]);
   models.usage = withStrikeUsage(models.usage);
+  models[REROLL_TYPE] = rerollCardModel();
   if ( config.ChatMessage.documentClass ) {
     config.ChatMessage.documentClass = withStrikeCascade(config.ChatMessage.documentClass);
   }
@@ -130,18 +147,15 @@ Hooks.once("init", () => {
   registerSettings();
   if ( !register(CONFIG) ) return;
   Hooks.on("preCreateChatMessage", onPreCreateMessage);
-  // Every rendered message and the rolls folded into it: name breakdown parts, show the d20s and
-  // mode toggles, mask results still rolling. dnd5e renders its cards after renderChatMessageHTML.
+  // Every rendered message and the rolls folded into it. dnd5e renders its cards after
+  // renderChatMessageHTML, so its own hook is used.
   Hooks.on("dnd5e.renderChatMessage", (message, html) => {
-    labelBreakdowns(message, html);
-    decorateRolls(message, html);
+    addOwnCardButtons(message, html);
+    decorate(message, html);
     for ( const summary of html.querySelectorAll(".card-summary[data-message-id]") ) {
       const folded = game.messages.get(summary.dataset.messageId);
-      if ( !folded ) continue;
-      labelBreakdowns(folded, summary);
-      decorateRolls(folded, summary, summary);
+      if ( folded ) decorate(folded, summary, summary);
     }
-    maskRolling(message, html);
   });
   if ( game.modules.get("dice-so-nice")?.active ) {
     Hooks.on("preCreateChatMessage", markRolling);
@@ -151,12 +165,15 @@ Hooks.once("init", () => {
   for ( const event of ["createChatMessage", "updateChatMessage", "deleteChatMessage"] ) {
     Hooks.on(event, refreshCards);
   }
+  Hooks.on("updateChatMessage", (message, changes) => { if ( "rolls" in changes ) refreshRerollCards(message); });
+  Hooks.on("deleteChatMessage", refreshRerollCards);
   Hooks.on("dnd5e.rollAttackV2", onRollAttack);
   Hooks.on("dnd5e.preRollV2", onPreRoll);
   Hooks.on("dnd5e.preUseActivity", onPreUseActivity);
   Hooks.on("dnd5e.postUseActivity", onPostUseActivity);
   Hooks.on("dnd5e.postBuildD20TestRollConfig", onPostBuildD20);
-  Hooks.on("dnd5e.postBuildRollConfig", onPostBuildRoll);
+  // Last, after the listeners of other modules, which may still add parts to the roll.
+  Hooks.once("ready", () => Hooks.on("dnd5e.postBuildRollConfig", onPostBuildRoll));
   Hooks.on("dnd5e.postDamageRollConfiguration", onPostDamageRollConfiguration);
   Hooks.on("dnd5e.preRollInitiative", onPreRollInitiative);
 });

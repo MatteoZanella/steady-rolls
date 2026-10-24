@@ -1,7 +1,7 @@
 {
   "id": "steady-strike",
   "title": "Steady Strike",
-  "description": "Shows each attack of a dnd5e 6 item with its damage on one card, using dnd5e's own card summaries.",
+  "description": "Shows dnd5e 6 attack, damage and healing rolls inside the item card that made them, with labelled breakdowns, switchable modes and rerolls.",
   "version": "0.1.0",
   "compatibility": {
     "minimum": "14",
@@ -27,6 +27,11 @@
         }
       }
     ]
+  },
+  "documentTypes": {
+    "ChatMessage": {
+      "reroll": {}
+    }
   },
   "esmodules": [
     "scripts/steady-strike.mjs"

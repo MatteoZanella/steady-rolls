@@ -1,135 +1,41 @@
 /**
  * Roll modes switched after the roll: advantage and disadvantage on d20 rolls, critical on
- * damage (following its attack's critical). The roll is rebuilt in the new mode by dnd5e
- * (configureModifiers, configureDamage) and evaluated by Foundry. Each die of the new roll is
- * fed the results of the die it comes from, so dice already rolled keep their values and only
- * missing dice are rolled; dice dropped by a switch are kept with the roll and reused by the
- * next one, so switching back and forth cannot fish for a better die.
- *
- * Dice are matched by identity, not by value: d20 rolls keep their structure, so a die is
- * its position; damage dice are tagged with their position in the formula before critical
- * scaling, and dnd5e's critical dice (altered counts, copies) carry the tag of their source.
- * Rolls whose dice cannot be tracked (pools, functions, random counts) get no toggles.
+ * damage (following its attack's critical). The roll is rebuilt in the new mode with its dice
+ * kept (rebuild.mjs): dice dropped by a switch are kept as spares and reused by the next one,
+ * so switching back and forth cannot fish for a better die. Also shows every d20 of a roll,
+ * and keeps a breakdown open across the redraw that a switch or reroll causes.
  */
 import { MODULE_ID } from "./common.mjs";
-import { diceSoNiceHides, isRolling, throwDice } from "./dice.mjs";
-
-/** Term option holding a damage die's position in the formula before critical scaling. */
-const SOURCE = "steadyStrikeSource";
-
-/** Result value standing for a new result, to find it in dnd5e's breakdown data. No die rolls it. */
-const MARK = -1;
+import { isRolling } from "./dice.mjs";
+import {
+  breakdownsOf, buildD20, buildDamage, canChange, changeRolls, diceOf, evaluateWith, isFixed, keyed, locateResults,
+  rebuildKind, throwAll
+} from "./rebuild.mjs";
 
 /** The breakdown open when a switch was clicked, shown again once its card is redrawn. */
 let reopen = null;
 
 /* -------------------------------------------- */
-/*  Dice identity                               */
-/* -------------------------------------------- */
-
-/** A roll's dice in evaluation order, or null if any dice cannot be tracked. */
-function diceOf(roll) {
-  const { DiceTerm, ParentheticalTerm, PoolTerm, FunctionTerm } = foundry.dice.terms;
-  const dice = [];
-  const visit = terms => terms.every(term => {
-    if ( term instanceof DiceTerm ) {
-      const random = [term._number, term._faces].some(r => (r instanceof Roll) && !r.isDeterministic);
-      if ( !random ) dice.push(term);
-      return !random;
-    }
-    if ( term instanceof ParentheticalTerm ) return visit((term.roll ??= Roll.create(term.term)).terms);
-    if ( (term instanceof PoolTerm) || (term instanceof FunctionTerm) ) return term.isDeterministic;
-    return true;
-  });
-  return visit(roll.terms) ? dice : null;
-}
-
-/** Each die with its identity: source and copy number ("0#0" for the first copy of source 0). */
-function keyed(dice) {
-  const copies = {};
-  return dice.map((die, index) => {
-    const source = die.options?.[SOURCE] ?? `u${index}`;
-    copies[source] = (copies[source] ?? -1) + 1;
-    return { die, key: `${source}#${copies[source]}` };
-  });
-}
-
-/** Whether two lists of dice have the same shape: size, count and modifiers. */
-function sameShape(a, b) {
-  return a && b && (a.length === b.length) && a.every((die, i) => (die.faces === b[i].faces)
-    && (die.number === b[i].number) && (die.modifiers.join() === b[i].modifiers.join()));
-}
-
-/* -------------------------------------------- */
-/*  Damage                                      */
-/* -------------------------------------------- */
-
-/** dnd5e.postBuildRollConfig: keep a damage roll's formula before critical scaling. */
-export function onPostBuildRoll(process, config) {
-  if ( !process.hookNames?.includes("damage") || !config.parts?.length ) return;
-  const base = Roll.replaceFormulaData(config.parts.join(" + "), config.data ?? {});
-  foundry.utils.setProperty(config, `options.${MODULE_ID}.base`, base);
-}
-
-/**
- * dnd5e.postDamageRollConfiguration: tag each die with its source, by rebuilding the roll from
- * its formula before scaling and checking that dnd5e produces the same dice.
- */
-export function onPostDamageRollConfiguration(rolls) {
-  for ( const roll of rolls ) {
-    if ( !roll.options?.[MODULE_ID]?.base ) continue;
-    const reference = diceOf(buildDamage(roll, roll.isCritical));
-    const dice = diceOf(roll);
-    if ( sameShape(reference, dice) ) dice.forEach((die, i) => die.options[SOURCE] = reference[i].options[SOURCE]);
-  }
-}
-
-/** A damage roll rebuilt from its formula before scaling, its dice tagged, then scaled by dnd5e. */
-function buildDamage(old, isCritical) {
-  const options = foundry.utils.deepClone(old.options);
-  delete options[MODULE_ID].spare;
-  delete options[MODULE_ID].fresh;
-  const roll = new old.constructor(options[MODULE_ID].base, old.data, {
-    ...options, isCritical, configured: true, preprocessed: false
-  });
-  diceOf(roll)?.forEach((die, i) => die.options[SOURCE] = i);
-  roll.options.configured = false;
-  roll.configureDamage();
-  // Dice added by the critical itself (its bonus damage) have no source: tag them by position.
-  diceOf(roll)?.forEach((die, i) => die.options[SOURCE] ??= `c${i}`);
-  return roll;
-}
-
-/* -------------------------------------------- */
 /*  Eligibility                                 */
 /* -------------------------------------------- */
 
-/** Whether a message's d20 rolls can switch mode: not once their result was applied (death saves, initiative). */
+/** Whether a message's d20 rolls can switch advantage. */
 function switchesAdvantage(message) {
-  if ( !["attack", "check", "save"].includes(message.type) || message.getFlag("core", "initiativeRoll") ) return false;
-  const { type, resisted, outcome } = message.system;
-  if ( (message.type === "save") && ((type === "death") || resisted || outcome) ) return false;
-  return (message.rolls.length > 0) && message.rolls.every(roll => roll.validD20Roll && diceOf(roll));
+  return rebuildKind(message) === "d20";
 }
 
 /**
- * Whether a message's damage rolls can switch critical. Only attacks crit: the damage of an
- * attack, or of a damage activity added to one (a smite); not a save's. A damage already
- * critical can always be switched back. Every die must be tagged with its source.
+ * Whether a message's damage can be critical. Only attacks crit: the damage of an attack, or of a
+ * damage activity added to one (a smite); not a save's. A damage already critical always can.
  */
-function switchesCritical(message) {
+function canCrit(message) {
   if ( message.type !== "damage" ) return false;
-  const canCrit = ["attack", "damage"].includes(message.getAssociatedActivity()?.type);
-  if ( !canCrit && !message.rolls[0]?.isCritical ) return false;
-  return (message.rolls.length > 0) && message.rolls.every(roll => {
-    const dice = roll.options?.[MODULE_ID]?.base && diceOf(roll);
-    return dice && dice.every(die => die.options?.[SOURCE] !== undefined);
-  });
+  return ["attack", "damage"].includes(message.getAssociatedActivity()?.type) || !!message.rolls[0]?.isCritical;
 }
 
-/** Whether this user can switch a message's rolls now. */
-function canSwitch(message) {
-  return message.canUserModify(game.user, "update") && message.isContentVisible && !isRolling(message);
+/** Whether a message's damage rolls can switch critical. */
+function switchesCritical(message) {
+  return canCrit(message) && (rebuildKind(message) === "damage");
 }
 
 /* -------------------------------------------- */
@@ -147,7 +53,7 @@ export function decorateRolls(message, root, own = null) {
   markBreakdowns(message, root, own);
   showAgain(message, root, own);
   if ( message.type === "damage" ) showCritical(message, root, own, buttons[0]);
-  if ( !canSwitch(message) ) return;
+  if ( !canChange(message) ) return;
   if ( switchesAdvantage(message) ) {
     const { ADVANTAGE, DISADVANTAGE, NORMAL } = CONFIG.Dice.D20Roll.ADV_MODE;
     buttons.forEach((button, index) => {
@@ -159,11 +65,14 @@ export function decorateRolls(message, root, own = null) {
         toggle(ADVANTAGE, "fa-angles-up", "DND5E.Advantage"));
     });
   }
-  else if ( switchesCritical(message) && buttons[0] ) {
-    const critical = message.rolls[0].isCritical;
-    const toggle = modeButton("fa-explosion", "DND5E.Critical", critical, () => setCritical(message, !critical));
-    toggle.classList.add("critical");
-    onBar(buttons[0], toggle, null);
+  else if ( buttons[0] && canCrit(message) ) {
+    // A damage kept as rolled shows its toggle disabled, with the reason.
+    const critical = !!message.rolls[0].isCritical;
+    const toggle = switchesCritical(message)
+      ? modeButton("fa-explosion", "DND5E.Critical", critical, () => setCritical(message, !critical))
+      : isFixed(message) ? modeButton("fa-explosion", "STEADY_STRIKE.CriticalFixed", critical) : null;
+    toggle?.classList.add("critical");
+    if ( toggle ) onBar(buttons[0], toggle, null);
   }
 }
 
@@ -175,7 +84,7 @@ export function decorateRolls(message, root, own = null) {
 function showCritical(message, root, own, button) {
   [...root.querySelectorAll(".pill.critical")].filter(p => p.closest(".card-summary") === own).forEach(p => p.remove());
   if ( !button || !message.rolls[0]?.isCritical || isRolling(message) ) return;
-  if ( canSwitch(message) && switchesCritical(message) ) return;
+  if ( canChange(message) && (switchesCritical(message) || isFixed(message)) ) return;
   const symbol = document.createElement("span");
   symbol.className = "steady-strike-mode critical";
   symbol.ariaLabel = game.i18n.localize("DND5E.Critical");
@@ -185,47 +94,20 @@ function showCritical(message, root, own, button) {
   onBar(button, symbol, null);
 }
 
-/** A message's breakdowns inside `root`, without those of rolls folded into it. */
-function breakdownsOf(root, own) {
-  return [...root.querySelectorAll(".roll-breakdown")].filter(p => p.closest(".card-summary") === own);
-}
-
-/**
- * While new dice roll, mark their results in the breakdown (`data-steady-strike-new`), for
- * masking. dnd5e builds the breakdown data from the rolls; it is built again here from copies
- * whose new results carry MARK, so each mark lands on the result dnd5e shows for it.
- */
+/** While new dice roll after a switch or reroll, mark their results in the breakdown (`data-steady-strike-new`). */
 function markBreakdowns(message, root, own) {
   if ( !isRolling(message) ) return;
   const added = message.rolls.map(roll => roll.options?.[MODULE_ID]?.fresh ?? {});
   if ( !added.some(a => Object.keys(a).length) ) return;
-  const marked = message.rolls.map((roll, i) => {
-    const copy = roll.constructor.fromData(foundry.utils.deepClone(roll.toJSON()));
-    for ( const { die, key } of keyed(diceOf(copy) ?? []) ) {
-      for ( const index of added[i][key] ?? [] ) if ( die.results[index] ) die.results[index].result = MARK;
-    }
-    return copy;
-  });
-  const breakdowns = breakdownsOf(root, own);
-  const parts = (message.type === "damage")
-    ? [(CONFIG.DND5E.aggregateDamageDisplay ? dnd5e.dice.aggregateDamageRolls(marked) : marked)
-      .map(roll => roll.aggregateTerms().dice)]
-    : marked.map(roll => roll.dice.map(die => die.getTooltipData().rolls));
-  parts.forEach((rolls, i) => {
-    const sections = breakdowns[i]?.querySelectorAll(".tooltip-part:not(.constant-term)") ?? [];
-    rolls.forEach((results, k) => {
-      const items = sections[k]?.querySelectorAll(".dice-rolls > li.roll") ?? [];
-      results.forEach((result, j) => {
-        if ( (result.result !== String(MARK)) || !items[j] ) return;
-        items[j].dataset.steadyStrikeNew = "";
-        sections[k].dataset.steadyStrikeNew = "";
-      });
-    });
-  });
+  for ( const { item, part, roll, key, index } of locateResults(message, root, own) ) {
+    if ( !added[roll][key]?.includes(index) ) continue;
+    item.dataset.steadyStrikeNew = "";
+    part.dataset.steadyStrikeNew = "";
+  }
 }
 
-/** Remember the open breakdown before a switch: clicking the toggle closes it (light dismiss). */
-function rememberBreakdown() {
+/** Remember the open breakdown before a change: clicking a toggle closes it (light dismiss). */
+export function rememberBreakdown() {
   reopen = null;
   const popover = document.querySelector(".roll-breakdown:popover-open");
   const scope = popover?.closest(".card-summary[data-message-id], .message[data-message-id]");
@@ -234,7 +116,13 @@ function rememberBreakdown() {
   reopen = { id: scope.dataset.messageId, index, notifications: !!popover.closest("#chat-notifications") };
 }
 
-/** Show the remembered breakdown again on its redrawn card, until its dice have landed. */
+/** Forget the remembered breakdown, when nothing changed: no redraw is coming. */
+function forgetBreakdown() {
+  reopen = null;
+  return null;
+}
+
+/** Show the remembered breakdown again on its redrawn card, on every redraw until the user closes it. */
 function showAgain(message, root, own) {
   const pending = reopen;
   if ( pending?.id !== message.id ) return;
@@ -246,18 +134,21 @@ function showAgain(message, root, own) {
     if ( !popover.isConnected || !roll?.checkVisibility() ) return;
     if ( !!popover.closest("#chat-notifications") !== pending.notifications ) return;
     popover.showPopover({ source: roll });
-    if ( (reopen === pending) && !isRolling(message) ) reopen = null;
+    // Closed by the user, not by a redraw (which removes it): no longer shown again.
+    popover.addEventListener("toggle", event => {
+      if ( (event.newState === "closed") && popover.isConnected && (reopen === pending) ) reopen = null;
+    });
   });
 }
 
 /**
- * Mark a roll's button: changed by the last switch (`data-steady-strike-switched`), with its new
- * d20 results (`data-steady-strike-new`), for masking. A roll with more than one d20 shows them
+ * Mark a roll's button: changed by the last switch or reroll (`data-steady-strike-changed`), with
+ * its new d20 results (`data-steady-strike-new`), for masking. A roll with more than one d20 shows them
  * all, in roll order, without the results replaced by rerolls.
  */
 function markRoll(button, roll) {
   const added = roll?.options?.[MODULE_ID]?.fresh;
-  if ( added ) button.dataset.steadyStrikeSwitched = "";
+  if ( added ) button.dataset.steadyStrikeChanged = "";
   const d20 = roll?.validD20Roll ? roll.d20 : null;
   const element = button.querySelector(".d20die");
   if ( !d20 || !element ) return;
@@ -302,6 +193,12 @@ function modeButton(icon, label, pressed, onClick) {
   button.ariaPressed = String(pressed);
   button.dataset.tooltip = "";
   button.innerHTML = `<i class="fa-solid ${icon}" inert></i>`;
+  // Without an action: shown, its tooltip giving the reason, but inert (aria-disabled keeps the tooltip).
+  if ( !onClick ) {
+    button.ariaDisabled = "true";
+    button.addEventListener("click", event => event.stopPropagation());
+    return button;
+  }
   button.addEventListener("pointerdown", rememberBreakdown);
   button.addEventListener("click", async event => {
     event.stopPropagation();
@@ -318,46 +215,74 @@ function modeButton(icon, label, pressed, onClick) {
 /*  Switching                                   */
 /* -------------------------------------------- */
 
-/** Switch one d20 roll to advantage, disadvantage or normal; an attack's damage follows its critical. */
-async function setAdvantage(message, index, mode) {
-  const { ADVANTAGE, DISADVANTAGE } = CONFIG.Dice.D20Roll.ADV_MODE;
-  const old = message.rolls[index];
-  const roll = old.clone();
-  roll.options = foundry.utils.deepClone(old.options);
-  Object.assign(roll.options, {
-    advantageMode: mode, advantage: mode === ADVANTAGE, disadvantage: mode === DISADVANTAGE, configured: false
+/**
+ * Replace one roll of a message by `build(old)`: { roll, dice }, or null to keep it. An attack's
+ * damage follows its new critical, and the new dice of both are thrown at once.
+ * @param {ChatMessage5e} message
+ * @param {number} index
+ * @param {"advantage"|"reroll"|"undo"} cause  For other modules (rebuild.mjs changeRolls).
+ * @param {(old: Roll) => Promise<{ roll: Roll, dice: Die[] }|null>} build
+ * @param {(rolls: Roll[]) => object} [changes]  Other changes to save with the new rolls.
+ * @returns {Promise<{ old: Roll, roll: Roll }|null>}
+ */
+export async function replaceRoll(message, index, cause, build, changes = () => ({})) {
+  let old;
+  let roll;
+  const saved = await changeRolls(message, cause, async current => {
+    old = current[index];
+    const built = old ? await build(old) : null;
+    if ( !built ) return null;
+    roll = built.roll;
+    const rolls = current.with(index, roll);
+    return { rolls, dice: built.dice, ...changes(rolls) };
   });
-  roll.configureModifiers();
-  const rolls = message.rolls.with(index, roll);
-  const attack = await save(message, rolls, await evaluateWith([old], [roll]), {
-    flavor: advantageFlavor(message.flavor, rolls)
-  });
-  const thrown = [attack];
-  if ( (message.type === "attack") && (old.isCritical !== roll.isCritical) ) {
-    const usage = message.system.origin;
-    // Only damage still matching the attack's old critical: a damage switched by hand stays.
-    const damage = (usage?.getAssociatedRolls?.("damage") ?? []).filter(m => switchesCritical(m) && canSwitch(m)
-      && (m.getFlag(MODULE_ID, "attack") === message.id) && (m.rolls[0].isCritical === old.isCritical));
-    // While the attack's dice roll, its damage is masked whole: its change would tell the crit.
-    for ( const m of damage ) thrown.push(await switchCritical(m, roll.isCritical, { whole: attack.masked }));
-  }
-  throwAll(thrown);
+  if ( !saved ) return forgetBreakdown();
+  throwAll([saved, ...await followCritical(message, old, roll, saved.masked)]);
+  return { old, roll };
+}
+
+/** Switch one d20 roll to advantage, disadvantage or normal. */
+function setAdvantage(message, index, mode) {
+  return replaceRoll(message, index, "advantage", async old => {
+    const roll = buildD20(old, mode);
+    return { roll, dice: await evaluateWith([old], [roll]) };
+  }, rolls => ({ flavor: advantageFlavor(message.flavor, rolls) }));
+}
+
+/**
+ * When an attack roll changes its critical, switch its damage to match: only damage still
+ * matching the attack's old critical, so a damage switched by hand stays. While the attack's
+ * dice roll (`masked`), the damage is masked whole: its change would tell the crit.
+ * @returns {Promise<object[]>}  The saved damage, for throwAll.
+ */
+async function followCritical(message, old, roll, masked) {
+  if ( (message.type !== "attack") || (old.isCritical === roll.isCritical) ) return [];
+  const usage = message.system.origin;
+  const damage = (usage?.getAssociatedRolls?.("damage") ?? []).filter(m => switchesCritical(m) && canChange(m)
+    && (m.getFlag(MODULE_ID, "attack") === message.id) && (m.rolls[0].isCritical === old.isCritical));
+  const thrown = [];
+  for ( const m of damage ) thrown.push(await switchCritical(m, roll.isCritical, { whole: masked }));
+  return thrown.filter(Boolean);
 }
 
 /** Switch all damage rolls of a message to critical or normal. */
 async function setCritical(message, isCritical) {
-  throwAll([await switchCritical(message, isCritical)]);
+  const saved = await switchCritical(message, isCritical);
+  if ( saved ) throwAll([saved]);
+  else forgetBreakdown();
 }
 
 /**
  * @param {object} [options]
  * @param {boolean} [options.whole]  Mask the whole damage until the dice land, not only its new dice.
  */
-async function switchCritical(message, isCritical, { whole = false } = {}) {
-  const rolls = message.rolls.map(old => buildDamage(old, isCritical));
-  const dice = await evaluateWith(message.rolls, rolls);
-  if ( whole ) rolls.forEach(roll => delete roll.options[MODULE_ID].fresh);
-  return save(message, rolls, dice, { mask: whole });
+function switchCritical(message, isCritical, { whole = false } = {}) {
+  return changeRolls(message, "critical", async current => {
+    const rolls = current.map(old => buildDamage(old, isCritical));
+    const dice = await evaluateWith(current, rolls);
+    if ( whole ) rolls.forEach(roll => delete roll.options[MODULE_ID].fresh);
+    return { rolls, dice, mask: whole };
+  });
 }
 
 /** The message flavor with dnd5e's advantage tag for the new rolls. */
@@ -369,75 +294,4 @@ function advantageFlavor(flavor = "", rolls) {
   if ( rolls.every(r => r.hasAdvantage) ) flavor += tag("DND5E.Advantage");
   else if ( rolls.every(r => r.hasDisadvantage) ) flavor += tag("DND5E.Disadvantage");
   return flavor;
-}
-
-/**
- * Evaluate new rolls, each die fed the results of the old die with the same identity (first
- * rolls, then rerolls and explosions), then its spares. Missing results are rolled through the
- * user's dice configuration (DiceTerm#_roll, Foundry's fulfillment point). Unused results are
- * kept as spares, and the indices of new results are recorded to mask only them.
- * @returns {Die[]}  The dice rolled anew, for Dice So Nice.
- */
-async function evaluateWith(oldRolls, rolls) {
-  const { Die } = foundry.dice.terms;
-  const fresh = {};
-  for ( const [i, roll] of rolls.entries() ) {
-    const old = oldRolls[i];
-    const queues = {};
-    for ( const { die, key } of keyed(diceOf(old)) ) {
-      const values = die.results.map(r => r.result);
-      const count = Number.isInteger(die.number) ? Math.abs(die.number) : values.length;
-      queues[key] = { first: values.slice(0, count), extra: values.slice(count) };
-    }
-    for ( const [key, spare] of Object.entries(old.options[MODULE_ID]?.spare ?? {}) ) {
-      queues[key] ??= { first: [], extra: [] };
-      queues[key].first.push(...spare.first);
-      queues[key].extra.push(...spare.extra);
-    }
-    const added = {};
-    const tracked = keyed(diceOf(roll)).map(({ die, key }) => {
-      const queue = queues[key] ?? { first: [], extra: [] };
-      delete queues[key];
-      die._roll = async (options = {}) => {
-        const values = queue[(options.reroll || options.explode) ? "extra" : "first"];
-        if ( values.length ) return values.shift();
-        const result = (await Object.getPrototypeOf(die)._roll.call(die, options)) ?? die.randomFace();
-        (added[key] ??= []).push(die.results.length);
-        (fresh[die.faces] ??= []).push(result);
-        return result;
-      };
-      return { key, queue };
-    });
-    await roll.evaluate({ allowInteractive: false });
-    const spare = { ...queues };
-    for ( const { key, queue } of tracked ) if ( queue.first.length || queue.extra.length ) spare[key] = queue;
-    roll.options[MODULE_ID] ??= {};
-    roll.options[MODULE_ID].spare = spare;
-    roll.options[MODULE_ID].fresh = added;
-  }
-  return Object.entries(fresh).map(([faces, values]) => new Die({
-    faces: Number(faces), number: values.length, results: values.map(result => ({ result, active: true }))
-  }));
-}
-
-/**
- * Save the new rolls. With new dice (or `mask`), the message is marked rolling, masking it until
- * the dice land; rolls left unchanged lose their record of new dice.
- * @returns {{ message: ChatMessage5e, dice: Die[], masked: boolean }}
- */
-async function save(message, rolls, dice, { mask = false, ...changes } = {}) {
-  for ( const roll of rolls ) {
-    if ( !message.rolls.includes(roll) ) continue;
-    delete roll.options[MODULE_ID]?.fresh;
-  }
-  const masked = (mask || (dice.length > 0)) && !!game.dice3d && diceSoNiceHides();
-  if ( masked ) changes[`flags.${MODULE_ID}.rolling`] = game.time.serverTime;
-  await message.update({ ...changes, rolls: rolls.map(roll => roll.toJSON()) });
-  return { message, dice, masked };
-}
-
-/** One Dice So Nice throw for every new die, then reveal the messages. */
-function throwAll(thrown) {
-  const dice = thrown.flatMap(t => t.dice);
-  if ( dice.length && game.dice3d ) throwDice(thrown.filter(t => t.masked || t.dice.length).map(t => t.message), dice);
 }
