@@ -1,4 +1,4 @@
-# Steady Strike
+# Steady Rolls
 
 Foundry VTT v14 module for dnd5e 6.
 
@@ -16,8 +16,8 @@ Foundry VTT v14 module for dnd5e 6.
 
 Changes made after a roll (advantage, critical, rerolls, undo) update the message without dnd5e's roll hooks. Modules can follow them with:
 
-- `steady-strike.preChangeRolls(message, rolls, cause)`: the new rolls, evaluated, before they are saved. Return `false` to cancel.
-- `steady-strike.changeRolls(message, previous, cause)`: after they are saved; `previous` are the rolls they replaced.
+- `steady-rolls.preChangeRolls(message, rolls, cause)`: the new rolls, evaluated, before they are saved. Return `false` to cancel.
+- `steady-rolls.changeRolls(message, previous, cause)`: after they are saved; `previous` are the rolls they replaced.
 
 `cause` is `"advantage"`, `"critical"`, `"reroll"` or `"undo"`.
 

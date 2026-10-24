@@ -16,10 +16,10 @@ function fastForwardSchema() {
   const { BooleanField, SchemaField } = foundry.data.fields;
   return new SchemaField({
     ...Object.fromEntries(ROLL_TYPES.map(type => [type, new BooleanField({
-      label: `STEADY_STRIKE.Settings.FastForward.Type.${type}`
+      label: `STEADY_ROLLS.Settings.FastForward.Type.${type}`
     })])),
     useChoices: new BooleanField({
-      initial: true, label: "STEADY_STRIKE.Settings.UseChoices.Name", hint: "STEADY_STRIKE.Settings.UseChoices.Hint"
+      initial: true, label: "STEADY_ROLLS.Settings.UseChoices.Name", hint: "STEADY_ROLLS.Settings.UseChoices.Hint"
     })
   });
 }
@@ -27,36 +27,36 @@ function fastForwardSchema() {
 export function registerSettings() {
   game.settings.register(MODULE_ID, "fastForward", { scope: "client", config: false, type: fastForwardSchema() });
   game.settings.registerMenu(MODULE_ID, "fastForwardMenu", {
-    name: "STEADY_STRIKE.Settings.FastForward.Name",
-    label: "STEADY_STRIKE.Settings.FastForward.Label",
-    hint: "STEADY_STRIKE.Settings.FastForward.MenuHint",
+    name: "STEADY_ROLLS.Settings.FastForward.Name",
+    label: "STEADY_ROLLS.Settings.FastForward.Label",
+    hint: "STEADY_ROLLS.Settings.FastForward.MenuHint",
     icon: "fa-solid fa-forward",
     type: FastForwardConfig,
     restricted: false
   });
   game.settings.register(MODULE_ID, "autoDamage", {
-    name: "STEADY_STRIKE.Settings.AutoDamage.Name",
-    hint: "STEADY_STRIKE.Settings.AutoDamage.Hint",
+    name: "STEADY_ROLLS.Settings.AutoDamage.Name",
+    hint: "STEADY_ROLLS.Settings.AutoDamage.Hint",
     scope: "client", config: true, type: String, default: "never",
     choices: {
-      never: "STEADY_STRIKE.Settings.AutoDamage.Never",
-      hit: "STEADY_STRIKE.Settings.AutoDamage.Hit",
-      always: "STEADY_STRIKE.Settings.AutoDamage.Always"
+      never: "STEADY_ROLLS.Settings.AutoDamage.Never",
+      hit: "STEADY_ROLLS.Settings.AutoDamage.Hit",
+      always: "STEADY_ROLLS.Settings.AutoDamage.Always"
     }
   });
   game.settings.register(MODULE_ID, "autoSaveDamage", {
-    name: "STEADY_STRIKE.Settings.AutoSaveDamage.Name",
-    hint: "STEADY_STRIKE.Settings.AutoSaveDamage.Hint",
+    name: "STEADY_ROLLS.Settings.AutoSaveDamage.Name",
+    hint: "STEADY_ROLLS.Settings.AutoSaveDamage.Hint",
     scope: "client", config: true, type: Boolean, default: true
   });
   game.settings.register(MODULE_ID, "rerolls", {
-    name: "STEADY_STRIKE.Settings.Rerolls.Name",
-    hint: "STEADY_STRIKE.Settings.Rerolls.Hint",
+    name: "STEADY_ROLLS.Settings.Rerolls.Name",
+    hint: "STEADY_ROLLS.Settings.Rerolls.Hint",
     scope: "world", config: true, type: String, default: "owner",
     choices: {
-      off: "STEADY_STRIKE.Settings.Rerolls.Off",
-      gm: "STEADY_STRIKE.Settings.Rerolls.GM",
-      owner: "STEADY_STRIKE.Settings.Rerolls.Owner"
+      off: "STEADY_ROLLS.Settings.Rerolls.Off",
+      gm: "STEADY_ROLLS.Settings.Rerolls.GM",
+      owner: "STEADY_ROLLS.Settings.Rerolls.Owner"
     }
   });
 }
@@ -73,7 +73,7 @@ function keyLabel(action) {
     ?? KeyboardManager.getKeycodeDisplayString(key);
   const labels = (game.keybindings.get("dnd5e", action) ?? [])
     .map(b => [...(b.modifiers ?? []), name(b.key)].join(" + "));
-  return [...new Set(labels)].join(" / ") || game.i18n.localize("STEADY_STRIKE.Settings.FastForward.Unbound");
+  return [...new Set(labels)].join(" / ") || game.i18n.localize("STEADY_ROLLS.Settings.FastForward.Unbound");
 }
 
 function wantsDialog(event) {
@@ -120,9 +120,9 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 /** Fast-forward choices, one column per roll type. */
 class FastForwardConfig extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
-    id: "steady-strike-fast-forward",
+    id: "steady-rolls-fast-forward",
     tag: "form",
-    window: { title: "STEADY_STRIKE.Settings.FastForward.Name", contentClasses: ["standard-form"] },
+    window: { title: "STEADY_ROLLS.Settings.FastForward.Name", contentClasses: ["standard-form"] },
     position: { width: 600 },
     form: { handler: FastForwardConfig.#onSubmit, closeOnSubmit: true }
   };
@@ -148,7 +148,7 @@ class FastForwardConfig extends HandlebarsApplicationMixin(ApplicationV2) {
   _onRender(context, options) {
     super._onRender(context, options);
     const all = this.element.querySelector("input[data-all]");
-    const boxes = [...this.element.querySelectorAll(".steady-strike-column input[name]")];
+    const boxes = [...this.element.querySelectorAll(".steady-rolls-column input[name]")];
     const sync = () => {
       const checked = boxes.filter(b => b.checked).length;
       all.checked = checked === boxes.length;

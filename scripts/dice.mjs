@@ -46,19 +46,19 @@ export function maskRolling(message, root, own = null) {
   if ( !isRolling(message) ) return;
   const mine = selector => [...root.querySelectorAll(selector)].filter(el => el.closest(".card-summary") === own);
   const buttons = mine("button.dice-roll");
-  const changed = buttons.filter(b => b.matches("[data-steady-strike-changed]"));
+  const changed = buttons.filter(b => b.matches("[data-steady-rolls-changed]"));
   for ( const button of changed.length ? changed : buttons ) {
     button.classList.remove("success", "failure", "critical", "fumble");
-    button.classList.add("steady-strike-rolling");
+    button.classList.add("steady-rolls-rolling");
     button.disabled = true;
     button.setAttribute("aria-busy", "true");
     button.querySelector(".icons")?.replaceChildren();
     const d20 = button.querySelector(".d20die");
     if ( d20 ) {
-      const dice = d20.matches(".steady-strike-d20s") ? [...d20.children] : [d20];
+      const dice = d20.matches(".steady-rolls-d20s") ? [...d20.children] : [d20];
       dice.forEach(d => d.classList.remove("dropped")); // Which die is kept is not known yet.
-      const rolling = changed.length ? dice.filter(d => d.matches("[data-steady-strike-new]")) : dice;
-      rolling.forEach(d => d.classList.add("steady-strike-tumbling"));
+      const rolling = changed.length ? dice.filter(d => d.matches("[data-steady-rolls-new]")) : dice;
+      rolling.forEach(d => d.classList.add("steady-rolls-tumbling"));
     }
     const total = button.querySelector(".total");
     if ( total ) total.innerHTML = `<i class="fa-solid ${d20 ? "fa-dice-d20" : "fa-dice-d6"}" inert></i>\u200b`;
@@ -68,15 +68,15 @@ export function maskRolling(message, root, own = null) {
     pill.removeAttribute("data-miss");
   }
   // In the breakdown, a new die tumbles without its number, and so does its part's total.
-  for ( const part of changed.length ? mine(".roll-breakdown [data-steady-strike-new].tooltip-part") : [] ) {
+  for ( const part of changed.length ? mine(".roll-breakdown [data-steady-rolls-new].tooltip-part") : [] ) {
     part.querySelectorAll("li.roll").forEach(li => li.classList.remove("discarded"));
-    part.querySelectorAll("li.roll[data-steady-strike-new]").forEach(li => {
+    part.querySelectorAll("li.roll[data-steady-rolls-new]").forEach(li => {
       li.classList.remove("min", "max"); // Their colours tell the result.
-      li.classList.add("steady-strike-tumbling");
+      li.classList.add("steady-rolls-tumbling");
       li.textContent = "\u00a0";
     });
     const value = part.querySelector(".total .value");
-    if ( value ) value.innerHTML = '<i class="fa-regular fa-dice-d20 steady-strike-spinner" inert></i>';
+    if ( value ) value.innerHTML = '<i class="fa-regular fa-dice-d20 steady-rolls-spinner" inert></i>';
   }
   // Breakdowns, applied damage and outcomes (death saves, resisted, recovered hit points).
   const outcomes = [...(changed.length ? [] : [".roll-breakdown"]), "damage-application", ".deltas"];
@@ -84,7 +84,7 @@ export function maskRolling(message, root, own = null) {
   mine(outcomes.join(", ")).forEach(el => el.remove());
 }
 
-/** diceSoNiceMessagePreProcess: Steady Strike plays the dice of marked rolls. */
+/** diceSoNiceMessagePreProcess: Steady Rolls plays the dice of marked rolls. */
 export function onDiceSoNicePreProcess(messageId, interception) {
   if ( isRolling(game.messages.get(messageId)) ) interception.willTrigger3DRoll = false;
 }

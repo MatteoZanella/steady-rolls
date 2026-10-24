@@ -18,14 +18,14 @@ const USAGE_TEMPLATE = `${TEMPLATES}/usage-card.hbs`;
 /** Buttons rolled once per card, by the message type of their roll: "again" once rolled. */
 const ONE_SHOT = { rollDamage: "damage", rollHealing: "healing" };
 /** Card action for a damage roll that belongs to the card's attack. */
-const DAMAGE_ACTION = "steadyStrikeDamage";
+const DAMAGE_ACTION = "steadyRollsDamage";
 /** Card action for a damage or healing roll with a card of its own. */
-const AGAIN_ACTION = "steadyStrikeAgain";
+const AGAIN_ACTION = "steadyRollsAgain";
 /** Tooltips of the "again" buttons, by dnd5e's action. */
 const AGAIN_LABELS = {
-  rollAttack: "STEADY_STRIKE.Again.attack",
-  rollDamage: "STEADY_STRIKE.Again.damage",
-  rollHealing: "STEADY_STRIKE.Again.healing"
+  rollAttack: "STEADY_ROLLS.Again.attack",
+  rollDamage: "STEADY_ROLLS.Again.damage",
+  rollHealing: "STEADY_ROLLS.Again.healing"
 };
 
 function summariesOn() {
@@ -168,7 +168,7 @@ async function onAgainAction(event, target) {
 
 /** Roll from a card's button, for the card it sits on (a strike or damage card, or the usage card). */
 async function rollFromCard(usage, event, target, options) {
-  const host = game.messages.get(target.closest("[data-steady-strike-host]")?.dataset.steadyStrikeHost) ?? usage;
+  const host = game.messages.get(target.closest("[data-steady-rolls-host]")?.dataset.steadyRollsHost) ?? usage;
   target.disabled = true;
   try {
     await rollStrikeDamage(usage, attackOf(host), event, options);
@@ -181,7 +181,7 @@ async function rollFromCard(usage, event, target, options) {
 function again(button, action = button.action) {
   return {
     ...button, action, label: AGAIN_LABELS[button.action] ?? button.label,
-    dataset: { ...button.dataset, action, steadyStrikeAgain: "" }
+    dataset: { ...button.dataset, action, steadyRollsAgain: "" }
   };
 }
 
@@ -316,7 +316,7 @@ export function addOwnCardButtons(message, html) {
   const buttonGroups = usage.system.strikeButtonGroups?.(message);
   if ( foundry.utils.isEmpty(buttonGroups ?? {}) ) return;
   ownCardButtons ??= Handlebars.compile(
-    '<div data-message-id="{{ usageId }}" data-steady-strike-host="{{ hostId }}">{{> "dnd5e.card-buttons" }}</div>'
+    '<div data-message-id="{{ usageId }}" data-steady-rolls-host="{{ hostId }}">{{> "dnd5e.card-buttons" }}</div>'
   );
   html.querySelector(".message-content")?.insertAdjacentHTML("beforeend",
     ownCardButtons({ buttonGroups, usageId: usage.id, hostId: message.id }));

@@ -1,17 +1,17 @@
 {{!-- A reroll: the die before and after, the roll, and Undo while it can be undone. --}}
-<div class="steady-strike-reroll-card dice-tooltip{{#if undone}} undone{{/if}}">
+<div class="steady-rolls-reroll-card dice-tooltip{{#if undone}} undone{{/if}}">
     <ol class="dice-rolls">
-        <li class="{{ before.classes }}"><span class="steady-strike-face">{{ before.value }}</span></li>
-        <li class="steady-strike-arrow"><i class="fa-solid fa-arrow-right-long" inert></i></li>
-        <li class="{{ after.classes }}"><span class="steady-strike-face">{{ after.value }}</span></li>
+        <li class="{{ before.classes }}"><span class="steady-rolls-face">{{ before.value }}</span></li>
+        <li class="steady-rolls-arrow"><i class="fa-solid fa-arrow-right-long" inert></i></li>
+        <li class="{{ after.classes }}"><span class="steady-rolls-face">{{ after.value }}</span></li>
     </ol>
-    <div class="steady-strike-reroll-text">
+    <div class="steady-rolls-reroll-text">
         <strong>{{ label }}</strong>
         <span>{{ note }}</span>
     </div>
     {{#if undoable}}
-    <button type="button" class="steady-strike-undo" data-action="undo"
-            aria-label="{{ localize "STEADY_STRIKE.Reroll.Undo" }}" data-tooltip>
+    <button type="button" class="steady-rolls-undo" data-action="undo"
+            aria-label="{{ localize "STEADY_ROLLS.Reroll.Undo" }}" data-tooltip>
         <i class="fa-solid fa-clock-rotate-left" inert></i>
     </button>
     {{/if}}

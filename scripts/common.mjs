@@ -1,5 +1,5 @@
 /** Names and checks shared by the module's scripts. */
-export const MODULE_ID = "steady-strike";
+export const MODULE_ID = "steady-rolls";
 export const TEMPLATES = `modules/${MODULE_ID}/templates`;
 
 /** Message types of a damage roll. */
@@ -17,6 +17,6 @@ export function hasDamage(activity) {
 
 /** Name a subclass after its base, for readable stacks and class names. */
 export function named(Subclass, Base) {
-  Object.defineProperty(Subclass, "name", { value: `SteadyStrike${Base.name}` });
+  Object.defineProperty(Subclass, "name", { value: `SteadyRolls${Base.name}` });
   return Subclass;
 }

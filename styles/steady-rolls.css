@@ -1,12 +1,12 @@
 /*
  * dnd5e styles rolls inside a .card-summary as compact rows (for save summaries). For
- * Steady Strike's rows (.steady-strike-roll), each of those rules is undone with the value
+ * Steady Rolls's rows (.steady-rolls-roll), each of those rules is undone with the value
  * dnd5e gives a roll on its own card. Not `revert-layer`: dnd5e's stylesheet is unlayered,
  * so that would also skip dnd5e's card rules.
  */
 
 /* dnd5e: .chat-log .message.compact button { --button-*-color } and .dnd5e2 button { padding; justify-content } */
-:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-strike-roll button.dice-roll {
+:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-rolls-roll button.dice-roll {
   --button-background-color: var(--dnd5e-chat-button-background);
   --button-border-color: var(--dnd5e-chat-button-border);
   --button-hover-border-color: var(--dnd5e-color-gold);
@@ -15,34 +15,34 @@
 }
 
 /* dnd5e sets no display on .d20die; it is position: absolute, which makes it a block. */
-:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-strike-roll button.dice-roll .d20die {
+:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-rolls-roll button.dice-roll .d20die {
   display: block;
 }
 
 /* dnd5e: button.dice-roll .result { flex: 1 } */
-:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-strike-roll button.dice-roll .result {
+:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-rolls-roll button.dice-roll .result {
   flex: 1;
 }
 
 /* dnd5e: button.dice-roll .icons { position: absolute } */
-:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-strike-roll button.dice-roll .icons {
+:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-rolls-roll button.dice-roll .icons {
   position: absolute;
 }
 
 /* dnd5e: .dice-roll :is(.result, .dice-total) > .total { border: 1px solid var(--dnd5e-color-gold) } */
-:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-strike-roll button.dice-roll .total {
+:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-rolls-roll button.dice-roll .total {
   border: 1px solid var(--dnd5e-color-gold);
 }
 
 /* dnd5e: .total::before, .total::after { content: "" } */
-:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-strike-roll button.dice-roll .total::before,
-:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-strike-roll button.dice-roll .total::after {
+:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-rolls-roll button.dice-roll .total::before,
+:is(.chat-log, .chat-popout) .message.compact .card-summary .steady-rolls-roll button.dice-roll .total::after {
   content: "";
 }
 
 /* Card buttons below the rolls: dnd5e's .card-summary separator. */
 :is(.chat-log, .chat-popout) .message.compact .message-content > .card-summary + section.icon-row,
-:is(.chat-log, .chat-popout) .message.compact .message-content > .card-summary + [data-steady-strike-host] {
+:is(.chat-log, .chat-popout) .message.compact .message-content > .card-summary + [data-steady-rolls-host] {
   border-block-start: 1px dashed var(--dnd5e-color-blue-gray-3);
   margin: 4px -8px 0;
   padding: 6px 8px 0;
@@ -55,10 +55,10 @@
  * theme. The plus sits at the button's centre + 5px; the icon, centred and moved 1px up-left,
  * has its cut at its centre + 6px.
  */
-:is(.chat-log, .chat-popout) .message.compact button[data-steady-strike-again] {
+:is(.chat-log, .chat-popout) .message.compact button[data-steady-rolls-again] {
   position: relative;
 }
-:is(.chat-log, .chat-popout) .message.compact button[data-steady-strike-again] > :first-child {
+:is(.chat-log, .chat-popout) .message.compact button[data-steady-rolls-again] > :first-child {
   mask-composite: exclude;
   mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0),
     linear-gradient(#000 0 0), linear-gradient(#000 0 0);
@@ -71,7 +71,7 @@
   padding: 4px;
   translate: -1px -1px;
 }
-:is(.chat-log, .chat-popout) .message.compact button[data-steady-strike-again]::after {
+:is(.chat-log, .chat-popout) .message.compact button[data-steady-rolls-again]::after {
   content: "\2b";
   font-family: var(--font-awesome);
   font-size: 10px;
@@ -95,14 +95,14 @@
  * roll button, so they neither open nor highlight it. Only the toggles that are on show at
  * rest; all show while the bar is hovered or focused.
  */
-:is(.chat-log, .chat-popout) .message.compact .steady-strike-bar {
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-bar {
   align-items: center;
   display: flex;
   flex: 1;
   gap: 4px;
   position: relative;
 }
-:is(.chat-log, .chat-popout) .message.compact .steady-strike-mode {
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-mode {
   background: none;
   block-size: auto;
   border: none;
@@ -118,30 +118,30 @@
   z-index: 1;
 }
 /* A larger click area than the icon, without moving it. */
-:is(.chat-log, .chat-popout) .message.compact .steady-strike-mode::after {
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-mode::after {
   content: "";
   inset: -6px -8px;
   position: absolute;
 }
-:is(.chat-log, .chat-popout) .message.compact .steady-strike-mode.before {
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-mode.before {
   inset-inline-end: calc(50% + 31px);
 }
-:is(.chat-log, .chat-popout) .message.compact .steady-strike-mode.after {
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-mode.after {
   inset-inline-start: calc(50% + 31px);
 }
-:is(.chat-log, .chat-popout) .message.compact .steady-strike-bar:is(:hover, :focus-within) .steady-strike-mode {
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-bar:is(:hover, :focus-within) .steady-rolls-mode {
   opacity: 0.45;
 }
-:is(.chat-log, .chat-popout) .message.compact .steady-strike-bar .steady-strike-mode:is(
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-bar .steady-rolls-mode:is(
   :not([aria-disabled="true"]):is(:hover, :focus-visible), [aria-pressed="true"]) {
   box-shadow: none;
   opacity: 1;
 }
-:is(.chat-log, .chat-popout) .message.compact .steady-strike-mode[aria-pressed="true"] {
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-mode[aria-pressed="true"] {
   color: var(--dnd5e-color-gold);
 }
 /* A toggle that can't act keeps its state and tooltip, without lighting up or inviting a click. */
-:is(.chat-log, .chat-popout) .message.compact .steady-strike-mode[aria-disabled="true"] {
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-mode[aria-disabled="true"] {
   box-shadow: none;
   cursor: default;
 }
@@ -149,17 +149,17 @@
  * The critical toggle is a status: at the bar's start, where dnd5e shows a roll's outcome icons,
  * and green when on, as dnd5e marks criticals.
  */
-:is(.chat-log, .chat-popout) .message.compact .steady-strike-mode.critical {
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-mode.critical {
   inset-inline-end: auto;
   inset-inline-start: 8px;
 }
-:is(.chat-log, .chat-popout) .message.compact .steady-strike-mode.critical:is([aria-pressed="true"], span) {
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-mode.critical:is([aria-pressed="true"], span) {
   color: var(--color-level-success);
   opacity: 1;
 }
 /* Native summaries (saves, checks) show only the total, at the row's end: toggles beside it. */
-:is(.chat-log, .chat-popout) .message.compact .card-summary .icon-row:not(.steady-strike-roll)
-  .steady-strike-mode {
+:is(.chat-log, .chat-popout) .message.compact .card-summary .icon-row:not(.steady-rolls-roll)
+  .steady-rolls-mode {
   inset: auto;
   position: relative; /* Holds its click area. */
   translate: none;
@@ -171,38 +171,38 @@
  * centring does not depend on the font's ascent and descent, which differ between platforms.
  * The transformed (rotated) die paints above static content, so the number is positioned.
  */
-:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die.steady-strike-d20s {
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die.steady-rolls-d20s {
   padding-block-start: 0;
 }
-:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-strike-d20 {
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-rolls-d20 {
   display: inline-grid;
   padding-block-start: 3px;
   place-items: center;
 }
-:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-strike-d20 + .steady-strike-d20 {
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-rolls-d20 + .steady-rolls-d20 {
   margin-inline-start: 2px;
 }
-:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-strike-d20 > * {
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-rolls-d20 > * {
   grid-area: 1 / 1;
 }
-:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-strike-d20 > i {
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-rolls-d20 > i {
   color: var(--dnd5e-chat-color-die);
   font-size: var(--font-size-16);
 }
-:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-strike-d20 .roll {
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-rolls-d20 .roll {
   inset: auto;
   letter-spacing: 0;
   line-height: 1;
   position: relative;
   text-box: trim-both cap alphabetic;
 }
-:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-strike-d20.dropped {
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .d20die .steady-rolls-d20.dropped {
   opacity: 0.35;
 }
-:is(.chat-log, .chat-popout) .message.compact button.dice-roll.critical .steady-strike-d20:not(.dropped) > i {
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll.critical .steady-rolls-d20:not(.dropped) > i {
   color: var(--color-level-success);
 }
-:is(.chat-log, .chat-popout) .message.compact button.dice-roll.fumble .steady-strike-d20:not(.dropped) > i {
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll.fumble .steady-rolls-d20:not(.dropped) > i {
   color: var(--color-level-error);
 }
 
@@ -210,34 +210,34 @@
  * Rerolls: dice that can be rerolled and the values rerolls replaced, in breakdowns and on the
  * info card. Scoped as Foundry's dice (.dice-tooltip .dice-rolls .roll), to win over its colours.
  */
-.dice-tooltip .dice-rolls li.roll:is(.steady-strike-rerollable, .steady-strike-undoable) {
+.dice-tooltip .dice-rolls li.roll:is(.steady-rolls-rerollable, .steady-rolls-undoable) {
   cursor: var(--cursor-pointer, pointer);
 }
-.dice-tooltip .dice-rolls li.roll:is(.steady-strike-rerollable, .steady-strike-undoable):focus-visible {
+.dice-tooltip .dice-rolls li.roll:is(.steady-rolls-rerollable, .steady-rolls-undoable):focus-visible {
   border-radius: 50%;
   outline: 1px solid var(--dnd5e-color-gold);
   outline-offset: 1px;
 }
 /* A die that can be rerolled turns slowly under its value while hovered. */
-.dice-tooltip .dice-rolls li.roll.steady-strike-rerollable:is(:hover, :focus-visible) {
-  animation: steady-strike-tumble 4s linear infinite;
+.dice-tooltip .dice-rolls li.roll.steady-rolls-rerollable:is(:hover, :focus-visible) {
+  animation: steady-rolls-tumble 4s linear infinite;
 }
-.dice-tooltip .dice-rolls li.roll.steady-strike-rerollable:is(:hover, :focus-visible) > .steady-strike-face {
-  animation: steady-strike-tumble 4s linear infinite reverse;
+.dice-tooltip .dice-rolls li.roll.steady-rolls-rerollable:is(:hover, :focus-visible) > .steady-rolls-face {
+  animation: steady-rolls-tumble 4s linear infinite reverse;
   display: inline-block;
 }
 /*
  * A replaced value: faded, crossed out on the die behind its value (isolated, so the cross stays
  * above the die); hovered, if it can be gone back to, an undo icon instead.
  */
-.dice-tooltip .dice-rolls li.roll.steady-strike-rerolled {
+.dice-tooltip .dice-rolls li.roll.steady-rolls-rerolled {
   isolation: isolate;
   opacity: 0.6;
 }
-.dice-tooltip .dice-rolls li.roll.steady-strike-rerolled::after {
-  --steady-strike-line: transparent calc(50% - 1px), currentColor calc(50% - 1px) calc(50% + 1px),
+.dice-tooltip .dice-rolls li.roll.steady-rolls-rerolled::after {
+  --steady-rolls-line: transparent calc(50% - 1px), currentColor calc(50% - 1px) calc(50% + 1px),
     transparent calc(50% + 1px);
-  background: linear-gradient(45deg, var(--steady-strike-line)), linear-gradient(-45deg, var(--steady-strike-line));
+  background: linear-gradient(45deg, var(--steady-rolls-line)), linear-gradient(-45deg, var(--steady-rolls-line));
   color: var(--dnd5e-color-maroon);
   content: "";
   inset: 3px;
@@ -245,13 +245,13 @@
   z-index: -1;
 }
 /* Hovered, an undo icon instead, and the values the undo would remove turn back. */
-.dice-tooltip .dice-rolls li.roll.steady-strike-undoable:is(:hover, :focus-visible) {
+.dice-tooltip .dice-rolls li.roll.steady-rolls-undoable:is(:hover, :focus-visible) {
   opacity: 1;
 }
-.dice-tooltip .dice-rolls li.roll.steady-strike-undoable:is(:hover, :focus-visible) > .steady-strike-face {
+.dice-tooltip .dice-rolls li.roll.steady-rolls-undoable:is(:hover, :focus-visible) > .steady-rolls-face {
   visibility: hidden;
 }
-.dice-tooltip .dice-rolls li.roll.steady-strike-undoable:is(:hover, :focus-visible)::after {
+.dice-tooltip .dice-rolls li.roll.steady-rolls-undoable:is(:hover, :focus-visible)::after {
   background: none;
   color: inherit;
   content: "\f1da";
@@ -261,25 +261,25 @@
   inset: 0;
   z-index: 0;
 }
-.dice-tooltip .dice-rolls li.roll.steady-strike-undoing {
-  animation: steady-strike-tumble 4s linear infinite reverse;
+.dice-tooltip .dice-rolls li.roll.steady-rolls-undoing {
+  animation: steady-rolls-tumble 4s linear infinite reverse;
 }
 /* Only the die turns: its value and its cross stay upright. */
-.dice-tooltip .dice-rolls li.roll.steady-strike-undoing > .steady-strike-face {
-  animation: steady-strike-tumble 4s linear infinite;
+.dice-tooltip .dice-rolls li.roll.steady-rolls-undoing > .steady-rolls-face {
+  animation: steady-rolls-tumble 4s linear infinite;
   display: inline-block;
 }
-.dice-tooltip .dice-rolls li.roll.steady-strike-undoing::after {
-  animation: steady-strike-tumble 4s linear infinite;
+.dice-tooltip .dice-rolls li.roll.steady-rolls-undoing::after {
+  animation: steady-rolls-tumble 4s linear infinite;
 }
 
 /* Reroll info card: the die before and after, the roll and who rerolled, then Undo. */
-:is(.chat-log, .chat-popout) .message .steady-strike-reroll-card {
+:is(.chat-log, .chat-popout) .message .steady-rolls-reroll-card {
   align-items: center;
   display: flex;
   gap: 8px;
 }
-:is(.chat-log, .chat-popout) .message .steady-strike-reroll-card .dice-rolls {
+:is(.chat-log, .chat-popout) .message .steady-rolls-reroll-card .dice-rolls {
   align-items: center;
   display: flex;
   flex: none;
@@ -287,31 +287,31 @@
   margin: 0;
   overflow: visible;
 }
-:is(.chat-log, .chat-popout) .message .steady-strike-reroll-card .dice-rolls > li {
+:is(.chat-log, .chat-popout) .message .steady-rolls-reroll-card .dice-rolls > li {
   float: none;
   margin: 0;
 }
-:is(.chat-log, .chat-popout) .message .steady-strike-reroll-card .steady-strike-arrow {
+:is(.chat-log, .chat-popout) .message .steady-rolls-reroll-card .steady-rolls-arrow {
   color: var(--color-text-secondary);
   font-size: var(--font-size-12);
 }
-:is(.chat-log, .chat-popout) .message .steady-strike-reroll-text {
+:is(.chat-log, .chat-popout) .message .steady-rolls-reroll-text {
   display: flex;
   flex: 1;
   flex-direction: column;
   line-height: 1.25;
   min-width: 0;
 }
-:is(.chat-log, .chat-popout) .message .steady-strike-reroll-text > * {
+:is(.chat-log, .chat-popout) .message .steady-rolls-reroll-text > * {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-:is(.chat-log, .chat-popout) .message .steady-strike-reroll-text > span {
+:is(.chat-log, .chat-popout) .message .steady-rolls-reroll-text > span {
   color: var(--color-text-secondary);
   font-size: var(--font-size-11);
 }
-:is(.chat-log, .chat-popout) .message .steady-strike-reroll-card .steady-strike-undo {
+:is(.chat-log, .chat-popout) .message .steady-rolls-reroll-card .steady-rolls-undo {
   flex: none;
   height: 24px;
   margin: 0;
@@ -320,69 +320,69 @@
 }
 
 /* Dice still rolling: a tumbling die in the total's frame, sized like a number. */
-:is(.chat-log, .chat-popout) .message.compact button.dice-roll.steady-strike-rolling {
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll.steady-rolls-rolling {
   cursor: progress;
   opacity: 1;
 }
-:is(.chat-log, .chat-popout) .message.compact button.dice-roll.steady-strike-rolling .total i {
-  animation: steady-strike-tumble 1.2s linear infinite;
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll.steady-rolls-rolling .total i {
+  animation: steady-rolls-tumble 1.2s linear infinite;
   color: var(--dnd5e-color-gold);
   display: inline-block;
   font-size: 0.75em;
 }
 /* A d20 still rolling: its die tumbles, without its number. */
-:is(.chat-log, .chat-popout) .message.compact button.dice-roll .steady-strike-tumbling > i {
-  animation: steady-strike-tumble 1.2s linear infinite;
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .steady-rolls-tumbling > i {
+  animation: steady-rolls-tumble 1.2s linear infinite;
 }
-:is(.chat-log, .chat-popout) .message.compact button.dice-roll .steady-strike-tumbling .roll {
+:is(.chat-log, .chat-popout) .message.compact button.dice-roll .steady-rolls-tumbling .roll {
   visibility: hidden;
 }
 /* In the breakdown: a new die still rolling tumbles, and the total it changes is a tumbling d20. */
-:is(.chat-log, .chat-popout) .message .roll-breakdown li.roll.steady-strike-tumbling,
-:is(.chat-log, .chat-popout) .message .roll-breakdown .steady-strike-spinner {
-  animation: steady-strike-tumble 1.2s linear infinite;
+:is(.chat-log, .chat-popout) .message .roll-breakdown li.roll.steady-rolls-tumbling,
+:is(.chat-log, .chat-popout) .message .roll-breakdown .steady-rolls-spinner {
+  animation: steady-rolls-tumble 1.2s linear infinite;
 }
-:is(.chat-log, .chat-popout) .message .roll-breakdown .steady-strike-spinner {
+:is(.chat-log, .chat-popout) .message .roll-breakdown .steady-rolls-spinner {
   color: var(--color-text-primary);
   display: inline-block;
   font-size: 0.8em;
 }
-@keyframes steady-strike-tumble {
+@keyframes steady-rolls-tumble {
   to { transform: rotate(360deg); }
 }
 @media (prefers-reduced-motion: reduce) {
-  :is(.chat-log, .chat-popout) .message.compact button.dice-roll.steady-strike-rolling .total i,
-  :is(.chat-log, .chat-popout) .message.compact button.dice-roll .steady-strike-tumbling > i,
-  :is(.chat-log, .chat-popout) .message .roll-breakdown li.roll.steady-strike-tumbling,
-  :is(.chat-log, .chat-popout) .message .roll-breakdown .steady-strike-spinner,
-  .dice-tooltip .dice-rolls li.roll:is(.steady-strike-rerollable, .steady-strike-undoing),
-  .dice-tooltip .dice-rolls li.roll:is(.steady-strike-rerollable, .steady-strike-undoing) > .steady-strike-face,
-  .dice-tooltip .dice-rolls li.roll.steady-strike-undoing::after {
+  :is(.chat-log, .chat-popout) .message.compact button.dice-roll.steady-rolls-rolling .total i,
+  :is(.chat-log, .chat-popout) .message.compact button.dice-roll .steady-rolls-tumbling > i,
+  :is(.chat-log, .chat-popout) .message .roll-breakdown li.roll.steady-rolls-tumbling,
+  :is(.chat-log, .chat-popout) .message .roll-breakdown .steady-rolls-spinner,
+  .dice-tooltip .dice-rolls li.roll:is(.steady-rolls-rerollable, .steady-rolls-undoing),
+  .dice-tooltip .dice-rolls li.roll:is(.steady-rolls-rerollable, .steady-rolls-undoing) > .steady-rolls-face,
+  .dice-tooltip .dice-rolls li.roll.steady-rolls-undoing::after {
     animation: none;
   }
 }
 
 /* Fast-forward settings: hint, then one column per roll type. */
-#steady-strike-fast-forward .steady-strike-fast-forward {
+#steady-rolls-fast-forward .steady-rolls-fast-forward {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-#steady-strike-fast-forward .steady-strike-fast-forward .hint {
+#steady-rolls-fast-forward .steady-rolls-fast-forward .hint {
   margin: 0;
 }
-#steady-strike-fast-forward .steady-strike-columns {
+#steady-rolls-fast-forward .steady-rolls-columns {
   display: grid;
   grid-auto-columns: minmax(0, 1fr);
   grid-auto-flow: column;
   gap: 8px;
 }
-#steady-strike-fast-forward .steady-strike-all {
+#steady-rolls-fast-forward .steady-rolls-all {
   border-inline-end: 1px solid var(--color-border);
   padding-inline-end: 8px;
 }
 /* Equal-height columns, checkbox at the bottom, so the checkboxes line up. */
-#steady-strike-fast-forward .steady-strike-column {
+#steady-rolls-fast-forward .steady-rolls-column {
   align-items: center;
   display: flex;
   flex-direction: column;
@@ -390,6 +390,6 @@
   justify-content: space-between;
   text-align: center;
 }
-#steady-strike-fast-forward .steady-strike-column > input {
+#steady-rolls-fast-forward .steady-rolls-column > input {
   margin: 0;
 }

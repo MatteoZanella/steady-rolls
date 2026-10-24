@@ -1,5 +1,5 @@
 /**
- * Steady Strike: attack, damage and healing rolls inside their dnd5e 6 item card.
+ * Steady Rolls: attack, damage and healing rolls inside their dnd5e 6 item card.
  *
  * dnd5e folds into a usage card every roll whose data model has a `summaryTemplate`; out of
  * the box only saves and checks have one. This module gives one to attack, damage and

@@ -1,6 +1,6 @@
 {
-  "id": "steady-strike",
-  "title": "Steady Strike",
+  "id": "steady-rolls",
+  "title": "Steady Rolls",
   "description": "Shows dnd5e 6 attack, damage and healing rolls inside the item card that made them, with labelled breakdowns, switchable modes and rerolls.",
   "version": "0.1.0",
   "compatibility": {
@@ -12,8 +12,8 @@
       "name": "Matteo Zanella"
     }
   ],
-  "url": "https://github.com/MatteoZanella/steady-strike",
-  "bugs": "https://github.com/MatteoZanella/steady-strike/issues",
+  "url": "https://github.com/MatteoZanella/steady-rolls",
+  "bugs": "https://github.com/MatteoZanella/steady-rolls/issues",
   "license": "LICENSE",
   "readme": "README.md",
   "relationships": {
@@ -34,10 +34,10 @@
     }
   },
   "esmodules": [
-    "scripts/steady-strike.mjs"
+    "scripts/steady-rolls.mjs"
   ],
   "styles": [
-    "styles/steady-strike.css"
+    "styles/steady-rolls.css"
   ],
   "languages": [
     {

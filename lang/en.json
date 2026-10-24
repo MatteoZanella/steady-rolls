@@ -1,5 +1,5 @@
 {
-  "STEADY_STRIKE": {
+  "STEADY_ROLLS": {
     "Again": {
       "attack": "Attack again",
       "damage": "Damage again, on its own card",
@@ -60,7 +60,7 @@
   },
   "TYPES": {
     "ChatMessage": {
-      "steady-strike.reroll": "Reroll"
+      "steady-rolls.reroll": "Reroll"
     }
   }
 }

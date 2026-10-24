@@ -51,7 +51,7 @@ function canReroll(message) {
 /**
  * dnd5e.renderChatMessage: in the breakdowns, the values replaced by rerolls crossed out before
  * the value that replaced them, and made buttons to go back to them; the dice this user can
- * reroll made buttons too. A die's value is wrapped (`.steady-strike-face`), so the die can
+ * reroll made buttons too. A die's value is wrapped (`.steady-rolls-face`), so the die can
  * turn under it.
  */
 export function decorateRerolls(message, root, own = null) {
@@ -62,8 +62,8 @@ export function decorateRerolls(message, root, own = null) {
     const replaced = history.map(entry => {
       const li = document.createElement("li");
       li.className = item.className;
-      li.classList.remove("min", "max", "discarded", "steady-strike-tumbling");
-      li.classList.add("steady-strike-rerolled");
+      li.classList.remove("min", "max", "discarded", "steady-rolls-tumbling");
+      li.classList.add("steady-rolls-rerolled");
       li.append(face(entry.old));
       item.before(li);
       return li;
@@ -71,27 +71,27 @@ export function decorateRerolls(message, root, own = null) {
     if ( replaced.length || (allowed && first) ) item.replaceChildren(face(...item.childNodes));
     history.forEach((entry, i) => {
       if ( !allowed ) return;
-      const label = game.i18n.format("STEADY_STRIKE.Reroll.GoBack", { value: entry.old });
-      asButton(replaced[i], "steady-strike-undoable", label, () => undo(message, roll, entry.id));
+      const label = game.i18n.format("STEADY_ROLLS.Reroll.GoBack", { value: entry.old });
+      asButton(replaced[i], "steady-rolls-undoable", label, () => undo(message, roll, entry.id));
       previewUndo(replaced[i], [...replaced.slice(i + 1), item]);
     });
     if ( !allowed || !first ) continue;
-    const label = game.i18n.localize("STEADY_STRIKE.Reroll.Action");
-    asButton(item, "steady-strike-rerollable", label, () => reroll(message, roll, key, index));
+    const label = game.i18n.localize("STEADY_ROLLS.Reroll.Action");
+    asButton(item, "steady-rolls-rerollable", label, () => reroll(message, roll, key, index));
   }
 }
 
 /** A die's value, in its own element. */
 function face(...content) {
   const span = document.createElement("span");
-  span.className = "steady-strike-face";
+  span.className = "steady-rolls-face";
   span.append(...content.map(c => (c instanceof Node) ? c : String(c)));
   return span;
 }
 
-/** While an undo is hovered or focused, the values it would remove turn back (`.steady-strike-undoing`). */
+/** While an undo is hovered or focused, the values it would remove turn back (`.steady-rolls-undoing`). */
 function previewUndo(button, removed) {
-  const show = on => () => removed.forEach(li => li.classList.toggle("steady-strike-undoing", on));
+  const show = on => () => removed.forEach(li => li.classList.toggle("steady-rolls-undoing", on));
   for ( const type of ["pointerenter", "focus"] ) button.addEventListener(type, show(true));
   for ( const type of ["pointerleave", "blur"] ) button.addEventListener(type, show(false));
 }
@@ -139,7 +139,7 @@ async function reroll(message, rollIndex, key, index) {
     faces: dieOf(done.old, key).faces, label: rollLabel(message), before: entry.old, after: entry.new
   };
   // The content is shown only if the module is disabled.
-  const content = game.i18n.format("STEADY_STRIKE.Reroll.Card", {
+  const content = game.i18n.format("STEADY_ROLLS.Reroll.Card", {
     user: game.user.name, faces: system.faces, label: system.label, old: entry.old, new: entry.new
   });
   await ChatMessage.implementation.create({
@@ -168,7 +168,7 @@ async function undo(message, rollIndex, id) {
     roll.options[MODULE_ID].rerolls = rerollsOf(old).filter(e => !undone.includes(e));
     return { roll, dice };
   });
-  if ( refused ) ui.notifications.warn("STEADY_STRIKE.Reroll.CannotUndo", { localize: true });
+  if ( refused ) ui.notifications.warn("STEADY_ROLLS.Reroll.CannotUndo", { localize: true });
 }
 
 /* -------------------------------------------- */
@@ -183,7 +183,7 @@ function rollLabel(message) {
 /** A die as Foundry draws it in breakdowns: its classes and value. */
 function dieChip(faces, value, crossed) {
   const classes = ["roll", "die", `d${DIE_IMAGES.has(faces) ? faces : 6}`];
-  if ( crossed ) classes.push("steady-strike-rerolled");
+  if ( crossed ) classes.push("steady-rolls-rerolled");
   else if ( value === 1 ) classes.push("min");
   else if ( value === faces ) classes.push("max");
   return { classes: classes.join(" "), value };
@@ -233,7 +233,7 @@ export function rerollCardModel() {
       return {
         undone,
         label: this.label,
-        note: game.i18n.format(`STEADY_STRIKE.Reroll.${undone ? "Undone" : "Done"}`, { faces: this.faces }),
+        note: game.i18n.format(`STEADY_ROLLS.Reroll.${undone ? "Undone" : "Done"}`, { faces: this.faces }),
         before: dieChip(this.faces, this.before, !undone),
         after: dieChip(this.faces, this.after, undone),
         undoable: !undone && !!roll && canReroll(message)

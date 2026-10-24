@@ -1,23 +1,23 @@
-<section class="steady-strike-fast-forward">
-    <p class="hint">{{ localize "STEADY_STRIKE.Settings.FastForward.Hint" key=key }}</p>
+<section class="steady-rolls-fast-forward">
+    <p class="hint">{{ localize "STEADY_ROLLS.Settings.FastForward.Hint" key=key }}</p>
     <fieldset>
-        <legend>{{ localize "STEADY_STRIKE.Settings.FastForward.Legend" }}</legend>
-        <div class="steady-strike-columns">
-            <label class="steady-strike-column steady-strike-all">
-                <span>{{ localize "STEADY_STRIKE.Settings.FastForward.All" }}</span>
+        <legend>{{ localize "STEADY_ROLLS.Settings.FastForward.Legend" }}</legend>
+        <div class="steady-rolls-columns">
+            <label class="steady-rolls-column steady-rolls-all">
+                <span>{{ localize "STEADY_ROLLS.Settings.FastForward.All" }}</span>
                 <input type="checkbox" data-all>
             </label>
             {{#each types}}
-            <label class="steady-strike-column">
+            <label class="steady-rolls-column">
                 <span>{{ localize label }}</span>
                 <input type="checkbox" name="{{ type }}" {{ checked checked }}>
             </label>
             {{/each}}
         </div>
         <div class="form-group">
-            <label for="steady-strike-use-choices">{{ localize useChoices.label }}</label>
+            <label for="steady-rolls-use-choices">{{ localize useChoices.label }}</label>
             <div class="form-fields">
-                <input type="checkbox" id="steady-strike-use-choices" name="useChoices"
+                <input type="checkbox" id="steady-rolls-use-choices" name="useChoices"
                        {{ checked useChoices.checked }}>
             </div>
             <p class="hint">{{ localize useChoices.hint }}</p>

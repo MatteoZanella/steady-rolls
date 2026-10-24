@@ -14,7 +14,7 @@ import { DAMAGE_TYPES, MODULE_ID } from "./common.mjs";
 import { diceSoNiceHides, isRolling, throwDice } from "./dice.mjs";
 
 /** Term option holding a damage die's position in the formula before critical scaling. */
-const SOURCE = "steadyStrikeSource";
+const SOURCE = "steadyRollsSource";
 
 /** A queued result to roll anew instead of reusing (a reroll). */
 const FRESH = Symbol("fresh");
@@ -241,9 +241,9 @@ export function canChange(message) {
  * ones, and they are saved only if the rolls are still those (another client may have changed
  * them meanwhile). A change asked while another runs is dropped.
  * Hooks, for other modules (dnd5e's roll hooks don't fire for a change):
- * - `steady-strike.preChangeRolls(message, rolls, cause)`: the new rolls, evaluated, before they
+ * - `steady-rolls.preChangeRolls(message, rolls, cause)`: the new rolls, evaluated, before they
  *   are saved; return false to cancel.
- * - `steady-strike.changeRolls(message, previous, cause)`: after; `previous` are the rolls replaced.
+ * - `steady-rolls.changeRolls(message, previous, cause)`: after; `previous` are the rolls replaced.
  * @param {ChatMessage5e} message
  * @param {"advantage"|"critical"|"reroll"|"undo"} cause
  * @param {(rolls: Roll[]) => Promise<{ rolls: Roll[], dice: Die[], mask?: boolean }|null>} build
@@ -259,7 +259,7 @@ export async function changeRolls(message, cause, build) {
     const built = await build(current);
     if ( !built ) return null;
     if ( JSON.stringify(message.rolls) !== before ) {
-      ui.notifications.warn("STEADY_STRIKE.Changed", { localize: true });
+      ui.notifications.warn("STEADY_ROLLS.Changed", { localize: true });
       return null;
     }
     const { rolls, dice, ...changes } = built;
@@ -333,7 +333,7 @@ export function locateResults(message, root, own) {
     const sections = breakdowns[i]?.querySelectorAll(".tooltip-part:not(.constant-term)") ?? [];
     rolls.forEach((results, k) => {
       // Without the replaced values a reroll puts back in the breakdown (rerolls.mjs).
-      const items = sections[k]?.querySelectorAll(".dice-rolls > li.roll:not(.steady-strike-rerolled)") ?? [];
+      const items = sections[k]?.querySelectorAll(".dice-rolls > li.roll:not(.steady-rolls-rerolled)") ?? [];
       results.forEach((result, j) => {
         const at = where[-Number(result.result) - 2];
         if ( at && items[j] ) found.push({ ...at, item: items[j], part: sections[k] });

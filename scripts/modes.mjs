@@ -70,7 +70,7 @@ export function decorateRolls(message, root, own = null) {
     const critical = !!message.rolls[0].isCritical;
     const toggle = switchesCritical(message)
       ? modeButton("fa-explosion", "DND5E.Critical", critical, () => setCritical(message, !critical))
-      : isFixed(message) ? modeButton("fa-explosion", "STEADY_STRIKE.CriticalFixed", critical) : null;
+      : isFixed(message) ? modeButton("fa-explosion", "STEADY_ROLLS.CriticalFixed", critical) : null;
     toggle?.classList.add("critical");
     if ( toggle ) onBar(buttons[0], toggle, null);
   }
@@ -86,7 +86,7 @@ function showCritical(message, root, own, button) {
   if ( !button || !message.rolls[0]?.isCritical || isRolling(message) ) return;
   if ( canChange(message) && (switchesCritical(message) || isFixed(message)) ) return;
   const symbol = document.createElement("span");
-  symbol.className = "steady-strike-mode critical";
+  symbol.className = "steady-rolls-mode critical";
   symbol.ariaLabel = game.i18n.localize("DND5E.Critical");
   symbol.dataset.tooltip = "";
   symbol.role = "img";
@@ -94,15 +94,15 @@ function showCritical(message, root, own, button) {
   onBar(button, symbol, null);
 }
 
-/** While new dice roll after a switch or reroll, mark their results in the breakdown (`data-steady-strike-new`). */
+/** While new dice roll after a switch or reroll, mark their results in the breakdown (`data-steady-rolls-new`). */
 function markBreakdowns(message, root, own) {
   if ( !isRolling(message) ) return;
   const added = message.rolls.map(roll => roll.options?.[MODULE_ID]?.fresh ?? {});
   if ( !added.some(a => Object.keys(a).length) ) return;
   for ( const { item, part, roll, key, index } of locateResults(message, root, own) ) {
     if ( !added[roll][key]?.includes(index) ) continue;
-    item.dataset.steadyStrikeNew = "";
-    part.dataset.steadyStrikeNew = "";
+    item.dataset.steadyRollsNew = "";
+    part.dataset.steadyRollsNew = "";
   }
 }
 
@@ -142,13 +142,13 @@ function showAgain(message, root, own) {
 }
 
 /**
- * Mark a roll's button: changed by the last switch or reroll (`data-steady-strike-changed`), with
- * its new d20 results (`data-steady-strike-new`), for masking. A roll with more than one d20 shows them
+ * Mark a roll's button: changed by the last switch or reroll (`data-steady-rolls-changed`), with
+ * its new d20 results (`data-steady-rolls-new`), for masking. A roll with more than one d20 shows them
  * all, in roll order, without the results replaced by rerolls.
  */
 function markRoll(button, roll) {
   const added = roll?.options?.[MODULE_ID]?.fresh;
-  if ( added ) button.dataset.steadyStrikeChanged = "";
+  if ( added ) button.dataset.steadyRollsChanged = "";
   const d20 = roll?.validD20Roll ? roll.d20 : null;
   const element = button.querySelector(".d20die");
   if ( !d20 || !element ) return;
@@ -157,14 +157,14 @@ function markRoll(button, roll) {
   const shown = d20.results.map((result, index) => ({ result, index }))
     .filter(({ result }) => result.active || result.discarded);
   if ( shown.length < 2 ) {
-    if ( shown.length && isNew(shown[0].index) ) element.dataset.steadyStrikeNew = "";
+    if ( shown.length && isNew(shown[0].index) ) element.dataset.steadyRollsNew = "";
     return;
   }
-  element.classList.add("steady-strike-d20s");
+  element.classList.add("steady-rolls-d20s");
   element.replaceChildren(...shown.map(({ result, index }) => {
     const span = document.createElement("span");
-    span.className = `steady-strike-d20${result.active ? "" : " dropped"}`;
-    if ( isNew(index) ) span.dataset.steadyStrikeNew = "";
+    span.className = `steady-rolls-d20${result.active ? "" : " dropped"}`;
+    if ( isNew(index) ) span.dataset.steadyRollsNew = "";
     span.innerHTML = '<i class="fa-fw fa-solid fa-hexagon fa-rotate-90" inert></i><span class="roll"></span>';
     span.querySelector(".roll").textContent = result.count ?? result.result;
     return span;
@@ -177,7 +177,7 @@ function markRoll(button, roll) {
  */
 function onBar(button, before, after) {
   const bar = document.createElement("span");
-  bar.className = "steady-strike-bar";
+  bar.className = "steady-rolls-bar";
   button.replaceWith(bar);
   before?.classList.add("before");
   after?.classList.add("after");
@@ -188,7 +188,7 @@ function onBar(button, before, after) {
 function modeButton(icon, label, pressed, onClick) {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = "steady-strike-mode";
+  button.className = "steady-rolls-mode";
   button.ariaLabel = game.i18n.localize(label);
   button.ariaPressed = String(pressed);
   button.dataset.tooltip = "";

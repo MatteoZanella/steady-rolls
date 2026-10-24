@@ -1,4 +1,4 @@
-Steady Strike
+Steady Rolls
 Copyright (c) 2026 Matteo Zanella. Licensed under the MIT License (see LICENSE).
 
 This module includes material adapted from third-party software:
@@ -10,7 +10,7 @@ https://github.com/foundryvtt/dnd5e
   templates/damage-summary.hbs  adapted from templates/chat/damage-card.hbs
   templates/strike-card.hbs     adapted from templates/chat/attack-card.hbs
   templates/usage-card.hbs      adapted from templates/chat/usage-card.hbs
-  styles/steady-strike.css      values copied from dnd5e.css
+  styles/steady-rolls.css      values copied from dnd5e.css
 
 Copyright 2021 Andrew Clayton
 
