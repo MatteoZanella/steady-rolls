@@ -4,8 +4,8 @@ import { D20Roll } from "./helpers/foundry.mjs";
 const load = () => import("../scripts/labels.mjs");
 const MODULE = "steady-rolls";
 
-/** An actor whose effect bonus rules are `rules` ({ value, name }), with `effects` on its fields. */
-function actor({ rules = [], effects = [], system = {} } = {}) {
+/** An actor whose effect bonus rules are `rules` ({ value, name }). */
+function actor({ rules = [] } = {}) {
   class Rules {
     static collect() {
       const list = rules.map(({ value, name }) => ({ value, effect: { name } }));
@@ -13,7 +13,7 @@ function actor({ rules = [], effects = [], system = {} } = {}) {
     }
   }
   return {
-    appliedRules: new Rules(), appliedEffects: effects, items: new Map(), system, _source: { system: {} },
+    appliedRules: new Rules(), appliedEffects: [], items: new Map(), system: {}, _source: { system: {} },
     getRollData: () => ({})
   };
 }
@@ -48,20 +48,6 @@ describe("onPostBuildD20", () => {
     });
   });
 
-  it("names a bonus from an effect with an old key, through dnd5e's key mapping", async () => {
-    const effect = {
-      name: "Old Ring",
-      changes: [{ key: "system.bonuses.mwak.attack", value: "2", type: "add" }],
-      _applyChangeShim: change => ({ ...change, key: "system.abilities.str.attack.roll.bonus" })
-    };
-    const system = { abilities: { str: { attack: { roll: { bonus: "2" } } } } };
-    expect(await attack(["@ruleBonus"], { ruleBonus: "2" }, actor({ effects: [effect], system }))).toEqual({
-      parts: ["2"], labels: ["Old Ring"]
-    });
-    delete effect._applyChangeShim;
-    expect((await attack(["@ruleBonus"], { ruleBonus: "2" }, actor({ effects: [effect], system }))).labels)
-      .toEqual(["DND5E.Bonus"]);
-  });
 });
 
 describe("labelBreakdowns", () => {

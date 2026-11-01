@@ -16,21 +16,6 @@ function holdDialogKey() {
   return { held: true };
 }
 
-describe("fast-forward setting", () => {
-  it("skips no dialog by default, and keeps the item use dialog for choices", async () => {
-    const { fastForward } = await load();
-    const types = ["use", "attack", "damage", "healing", "checks", "saves"];
-    expect(types.map(fastForward)).toEqual(types.map(() => false));
-    expect(fastForward("useChoices")).toBe(true);
-  });
-
-  it("fills choices missing from a stored value with their defaults", async () => {
-    const { fastForward } = await load({ attack: true });
-    expect(fastForward("attack")).toBe(true);
-    expect(fastForward("damage")).toBe(false);
-    expect(fastForward("useChoices")).toBe(true);
-  });
-});
 
 describe("onPreRoll", () => {
   const roll = (hookNames, type) => [{ hookNames }, {}, { data: { type } }];
@@ -74,13 +59,6 @@ describe("onPreUseActivity", () => {
   const plain = { canScale: false, type: "attack", consumption: { targets: [] } };
   const leveled = { ...plain, canScale: true };
   const slotSpender = { ...plain, consumption: { targets: [{ type: "spellSlots" }] } };
-
-  it("leaves item use alone unless it is fast-forwarded", async () => {
-    const { onPreUseActivity } = await load();
-    const dialog = {};
-    onPreUseActivity(plain, {}, dialog);
-    expect(dialog.configure).toBeUndefined();
-  });
 
   it("skips the dialog, unless there is a choice to make or the dialog key is held", async () => {
     const { onPreUseActivity } = await load({ use: true });

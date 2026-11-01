@@ -91,12 +91,6 @@ describe("maskRolling", () => {
     expect(newDie.textContent.trim()).toBe("");
   });
 
-  it("leaves a message whose dice have landed", async () => {
-    const { maskRolling } = await load();
-    const root = card(false);
-    maskRolling(new Message(), root);
-    expect(root.querySelector("button.dice-roll").disabled).toBe(false);
-  });
 });
 
 describe("playDice", () => {

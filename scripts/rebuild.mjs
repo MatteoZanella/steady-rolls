@@ -231,9 +231,14 @@ export async function evaluateWith(oldRolls, rolls, { replace = [] } = {}) {
 /*  Changing                                    */
 /* -------------------------------------------- */
 
-/** Whether this user can change a message's rolls now. */
+/** Whether this user may change a message's rolls: its author or the GM, who can see its content. */
+export function canModify(message) {
+  return message.canUserModify(game.user, "update") && message.isContentVisible;
+}
+
+/** Whether this user can change a message's rolls now: not while its dice roll. */
 export function canChange(message) {
-  return message.canUserModify(game.user, "update") && message.isContentVisible && !isRolling(message);
+  return canModify(message) && !isRolling(message);
 }
 
 /**

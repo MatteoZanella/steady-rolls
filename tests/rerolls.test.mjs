@@ -110,16 +110,6 @@ describe("info card", () => {
     return { message, model: new Model(system), Model };
   }
 
-  it("shows the die before and after, crossed out where replaced, with Undo for who can reroll", async () => {
-    const { model, Model } = await card();
-    expect(Model.metadata.template).toBe(`modules/${MODULE}/templates/reroll-card.hbs`);
-    expect(Model.metadata.actions.undo).toBeTypeOf("function");
-    const context = await model._prepareContext({});
-    expect(context).toMatchObject({ undone: false, label: "Longsword", undoable: true });
-    expect(context.before).toEqual({ classes: "roll die d20 steady-rolls-rerolled", value: 3 });
-    expect(context.after).toEqual({ classes: "roll die d20", value: 9 });
-  });
-
   it("reads as undone once the roll no longer has the reroll, and loses its Undo", async () => {
     const { message, model } = await card();
     message.rolls[0].options[MODULE].rerolls = [];

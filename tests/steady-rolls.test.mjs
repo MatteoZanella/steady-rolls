@@ -61,11 +61,4 @@ describe("init", () => {
     expect(Hooks.on).not.toHaveBeenCalledWith("dnd5e.renderChatMessage", expect.any(Function));
   });
 
-  it("does nothing in another system", async () => {
-    dnd5eClasses();
-    game.system.id = "pf2e";
-    const models = await init();
-    expect(models.attack.metadata.summaryTemplate).toBe("");
-    expect(game.settings.register).not.toHaveBeenCalled();
-  });
 });

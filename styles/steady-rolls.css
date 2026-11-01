@@ -114,6 +114,8 @@
   opacity: 0;
   padding: 0;
   position: absolute;
+  /* Foundry fades buttons in (transition: 0.5s): redrawn after each switch, the toggles would fade in again. */
+  transition: none;
   translate: 0 -50%;
   z-index: 1;
 }

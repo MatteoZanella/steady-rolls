@@ -460,4 +460,4 @@ beforeEach(() => {
   install();
 });
 
-export { DamageRoll, D20Roll, Die, PoolTerm };
+export { DamageRoll, D20Roll, PoolTerm };

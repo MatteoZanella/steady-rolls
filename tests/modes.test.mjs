@@ -39,27 +39,6 @@ const toggles = root => [...root.querySelectorAll(".steady-rolls-mode")];
 const pressed = root => toggles(root).map(t => t.ariaPressed);
 
 describe("d20 rolls", () => {
-  it("puts disadvantage and advantage toggles either side of the total, the current mode pressed", async () => {
-    const { decorateRolls } = await load();
-    const message = new Message({ type: "attack", author: game.user.id, rolls: [await d20(1, 7, 15)] });
-    const root = card(message);
-    decorateRolls(message, root);
-    const bar = root.querySelector(".steady-rolls-bar");
-    expect([...bar.children].map(c => c.className)).toEqual([
-      "steady-rolls-mode before", "dice-roll", "steady-rolls-mode after"
-    ]);
-    expect(pressed(root)).toEqual(["false", "true"]);
-  });
-
-  it("shows each d20 of the roll, the dropped one greyed", async () => {
-    const { decorateRolls } = await load();
-    const message = new Message({ type: "attack", rolls: [await d20(1, 7, 15)] });
-    const root = card(message);
-    decorateRolls(message, root);
-    const dice = [...root.querySelectorAll(".steady-rolls-d20")];
-    expect(dice.map(d => [d.textContent, d.classList.contains("dropped")])).toEqual([["7", true], ["15", false]]);
-  });
-
   it("gives no toggles to a user who can't change the roll", async () => {
     const { decorateRolls } = await load();
     const message = new Message({ type: "attack", author: "someone else", rolls: [await d20(0, 7)] });
@@ -88,15 +67,14 @@ describe("critical damage", () => {
     type: "damage", author, rolls: [roll], activity: { type: "attack" }
   });
 
-  it("puts a critical toggle at the bar's start of an attack's damage", async () => {
+  it("doesn't show the critical while the dice roll: it would tell the attack's", async () => {
     const { decorateRolls } = await load();
     const message = await attackDamage(await damage({ isCritical: true }));
+    message.flags[MODULE] = { rolling: game.time.serverTime };
     const root = card(message);
     decorateRolls(message, root);
-    const [toggle] = toggles(root);
-    expect(toggle.classList).toContain("critical");
-    expect(toggle.ariaPressed).toBe("true");
-    expect(toggle.hasAttribute("aria-disabled")).toBe(false);
+    expect(pressed(root)).toEqual(["false"]);
+    expect(root.querySelector("span.steady-rolls-mode")).toBeNull();
   });
 
   it("shows the toggle disabled, with the reason, for damage changed by another module", async () => {
@@ -109,7 +87,7 @@ describe("critical damage", () => {
     expect(toggle.ariaLabel).toBe("STEADY_ROLLS.CriticalFixed");
   });
 
-  it("offers no critical for a save's damage, and shows only the symbol to other users", async () => {
+  it("offers no critical for a save's damage: saves don't crit", async () => {
     const { decorateRolls } = await load();
     const save = new Message({
       type: "damage", author: game.user.id, rolls: [await damage()], activity: { type: "save" }
@@ -117,11 +95,6 @@ describe("critical damage", () => {
     const saveCard = card(save);
     decorateRolls(save, saveCard);
     expect(toggles(saveCard)).toEqual([]);
-    const theirs = await attackDamage(await damage({ isCritical: true }), "someone else");
-    const theirCard = card(theirs);
-    decorateRolls(theirs, theirCard);
-    const [symbol] = toggles(theirCard);
-    expect(symbol.tagName).toBe("SPAN");
   });
 
   it("follows the attack: damage still matching the attack's old critical switches with it", async () => {

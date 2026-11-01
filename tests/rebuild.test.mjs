@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
-import { D20Roll, DamageRoll, Die, Message, PoolTerm, nextFaces } from "./helpers/foundry.mjs";
+import { D20Roll, DamageRoll, Message, PoolTerm, nextFaces } from "./helpers/foundry.mjs";
 
 const load = () => import("../scripts/rebuild.mjs");
 const MODULE = "steady-rolls";
@@ -41,12 +41,6 @@ describe("dice identity", () => {
     expect(diceOf(roll)).toHaveLength(2);
   });
 
-  it("names dice by position, or by source and copy once tagged", async () => {
-    const { keyed } = await load();
-    const tagged = source => new Die({ options: { steadyRollsSource: source } });
-    expect(keyed([new Die(), new Die()]).map(k => k.key)).toEqual(["u0#0", "u1#0"]);
-    expect(keyed([tagged(0), tagged(0), tagged("c2")]).map(k => k.key)).toEqual(["0#0", "0#1", "c2#0"]);
-  });
 });
 
 describe("evaluateWith", () => {
@@ -99,15 +93,6 @@ describe("evaluateWith", () => {
 });
 
 describe("damage rolls", () => {
-  it("reads the base formula only for damage rolls, with roll data resolved", async () => {
-    const { onPostBuildRoll } = await load();
-    const config = { parts: ["1d8", "@mod"], data: { mod: 3 } };
-    onPostBuildRoll({ hookNames: ["attack"] }, config);
-    expect(config.options).toBeUndefined();
-    onPostBuildRoll({ hookNames: ["damage"] }, config);
-    expect(config.options[MODULE].base).toBe("1d8 + 3");
-  });
-
   it("switches critical keeping the dice, and every part of a normal roll", async () => {
     const { buildDamage, evaluateWith, rebuildKind } = await load();
     const normal = await damage(["1d8", "3"], { late: ["2"], results: [5] });

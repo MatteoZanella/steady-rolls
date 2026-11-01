@@ -8,8 +8,8 @@
 import { MODULE_ID } from "./common.mjs";
 import { isRolling } from "./dice.mjs";
 import {
-  breakdownsOf, buildD20, buildDamage, canChange, changeRolls, diceOf, evaluateWith, isFixed, keyed, locateResults,
-  rebuildKind, throwAll
+  breakdownsOf, buildD20, buildDamage, canChange, canModify, changeRolls, diceOf, evaluateWith, isFixed, keyed,
+  locateResults, rebuildKind, throwAll
 } from "./rebuild.mjs";
 
 /** The breakdown open when a switch was clicked, shown again once its card is redrawn. */
@@ -53,24 +53,28 @@ export function decorateRolls(message, root, own = null) {
   markBreakdowns(message, root, own);
   showAgain(message, root, own);
   if ( message.type === "damage" ) showCritical(message, root, own, buttons[0]);
-  if ( !canChange(message) ) return;
+  if ( !canModify(message) ) return;
+  // While its new dice roll, a roll keeps its toggles in place, inert, so they don't vanish and come back.
+  const rolling = isRolling(message);
+  const act = onClick => (rolling ? null : onClick);
   if ( switchesAdvantage(message) ) {
     const { ADVANTAGE, DISADVANTAGE, NORMAL } = CONFIG.Dice.D20Roll.ADV_MODE;
     buttons.forEach((button, index) => {
       const current = message.rolls[index]?.options.advantageMode;
       if ( current === undefined ) return;
       const toggle = (mode, icon, label) => modeButton(icon, label, current === mode,
-        () => setAdvantage(message, index, (current === mode) ? NORMAL : mode));
+        act(() => setAdvantage(message, index, (current === mode) ? NORMAL : mode)));
       onBar(button, toggle(DISADVANTAGE, "fa-angles-down", "DND5E.Disadvantage"),
         toggle(ADVANTAGE, "fa-angles-up", "DND5E.Advantage"));
     });
   }
   else if ( buttons[0] && canCrit(message) ) {
-    // A damage kept as rolled shows its toggle disabled, with the reason.
+    // A damage kept as rolled shows its toggle disabled, with the reason. While the dice roll, the
+    // toggle doesn't show the critical: it would tell the attack's.
     const critical = !!message.rolls[0].isCritical;
     const toggle = switchesCritical(message)
-      ? modeButton("fa-explosion", "DND5E.Critical", critical, () => setCritical(message, !critical))
-      : isFixed(message) ? modeButton("fa-explosion", "STEADY_ROLLS.CriticalFixed", critical) : null;
+      ? modeButton("fa-explosion", "DND5E.Critical", critical && !rolling, act(() => setCritical(message, !critical)))
+      : isFixed(message) ? modeButton("fa-explosion", "STEADY_ROLLS.CriticalFixed", critical && !rolling) : null;
     toggle?.classList.add("critical");
     if ( toggle ) onBar(buttons[0], toggle, null);
   }
@@ -193,7 +197,8 @@ function modeButton(icon, label, pressed, onClick) {
   button.ariaPressed = String(pressed);
   button.dataset.tooltip = "";
   button.innerHTML = `<i class="fa-solid ${icon}" inert></i>`;
-  // Without an action: shown, its tooltip giving the reason, but inert (aria-disabled keeps the tooltip).
+  // Without an action (dice rolling, or kept as rolled): shown with its tooltip, but inert (aria-disabled,
+  // which keeps the tooltip).
   if ( !onClick ) {
     button.ariaDisabled = "true";
     button.addEventListener("click", event => event.stopPropagation());
