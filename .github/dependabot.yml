@@ -1,0 +1,18 @@
+# Weekly pull requests updating the workflow's actions (their pinned commits) and the npm
+# dev dependencies, each ecosystem in one grouped pull request; CI tests them like any other.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dev-dependencies:
+        patterns: ["*"]

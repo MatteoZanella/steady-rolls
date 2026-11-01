@@ -12,6 +12,12 @@ Foundry VTT v14 module for dnd5e 6.
 - Optional fast-forward per roll type, automatic damage (never, on hit, always) and automatic save damage.
 - With Dice So Nice, cards appear at once and show their results when the dice land.
 
+## Installation
+
+In Foundry, Add-on Modules → Install Module, with this manifest URL:
+
+`https://github.com/MatteoZanella/steady-rolls/releases/latest/download/module.json`
+
 ## Hooks
 
 Changes made after a roll (advantage, critical, rerolls, undo) update the message without dnd5e's roll hooks. Modules can follow them with:

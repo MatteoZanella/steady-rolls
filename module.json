@@ -14,6 +14,7 @@
   ],
   "url": "https://github.com/MatteoZanella/steady-rolls",
   "bugs": "https://github.com/MatteoZanella/steady-rolls/issues",
+  "manifest": "https://github.com/MatteoZanella/steady-rolls/releases/latest/download/module.json",
   "license": "LICENSE",
   "readme": "README.md",
   "relationships": {
