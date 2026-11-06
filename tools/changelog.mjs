@@ -1,12 +1,13 @@
 /**
- * Print a version's section of CHANGELOG.md, for its release notes: "## [1.2.3]", or for a
- * prerelease without a section of its own, "## [Unreleased]". Fails when the section is missing
- * or empty, so no release goes out without notes.
+ * Print a release's notes: its version's section of CHANGELOG.md ("## [1.2.3]", or for a
+ * prerelease without a section of its own, "## [Unreleased]"), then the manifest URL that installs
+ * this release. Fails when the section is missing or empty, so no release goes out without notes.
  * Usage: node tools/changelog.mjs v1.2.3
  */
 import { readFile } from "node:fs/promises";
 
-const version = (process.argv[2] ?? "").replace(/^v/, "");
+const tag = process.argv[2] ?? "";
+const version = tag.replace(/^v/, "");
 const sections = {};
 for ( const section of (await readFile("CHANGELOG.md", "utf8")).split(/^## /m).slice(1) ) {
   const [heading, ...body] = section.split("\n");
@@ -18,4 +19,13 @@ if ( !notes ) {
   console.error(`CHANGELOG.md has no notes for ${version}: add a "## [${version}]" section.`);
   process.exit(1);
 }
-console.log(notes);
+const { url } = JSON.parse(await readFile("module.json", "utf8"));
+console.log(`${notes}
+
+### Installation
+
+To install this release rather than the latest, use this manifest URL in Foundry (Add-on Modules → Install Module):
+
+\`${url}/releases/download/${tag}/module.json\`
+
+`);
