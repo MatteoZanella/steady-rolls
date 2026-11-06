@@ -4,6 +4,14 @@ Notable changes, newest first ([Keep a Changelog](https://keepachangelog.com), v
 
 ## [Unreleased]
 
+### Added
+
+- Placing an area of effect targets the tokens inside, on your targets and on the item card, so its save and damage buttons use them. Spells that affect only allies or enemies take only those. While placing, your targets are released and the tokens it will target show faint target arrows; cancelling brings your targets back. A client setting turns it off.
+
+### Fixed
+
+- The advantage, disadvantage and critical toggles no longer fade in again, or vanish while new dice roll, after a click.
+
 ## [0.2.0-beta.1] - 2026-10-31
 
 First beta, for testing; still in development.

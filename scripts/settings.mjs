@@ -1,5 +1,6 @@
 /**
- * Settings: fast-forward per roll type (one setting, typed by its schema), automatic damage, rerolls.
+ * Settings: fast-forward per roll type (one setting, typed by its schema), automatic damage,
+ * targets from templates, rerolls.
  * Fast-forward is set in dnd5e's pre-roll hooks, which run before dnd5e reads its skip-dialog
  * keys (`dialog.configure ??=`); the skip-dialog key then shows the dialog instead.
  */
@@ -47,6 +48,11 @@ export function registerSettings() {
   game.settings.register(MODULE_ID, "autoSaveDamage", {
     name: "STEADY_ROLLS.Settings.AutoSaveDamage.Name",
     hint: "STEADY_ROLLS.Settings.AutoSaveDamage.Hint",
+    scope: "client", config: true, type: Boolean, default: true
+  });
+  game.settings.register(MODULE_ID, "templateTargets", {
+    name: "STEADY_ROLLS.Settings.TemplateTargets.Name",
+    hint: "STEADY_ROLLS.Settings.TemplateTargets.Hint",
     scope: "client", config: true, type: Boolean, default: true
   });
   game.settings.register(MODULE_ID, "rerolls", {

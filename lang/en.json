@@ -40,6 +40,10 @@
         },
         "All": "All"
       },
+      "TemplateTargets": {
+        "Name": "Target tokens in templates",
+        "Hint": "Once an area of effect is placed, the tokens inside become your targets and the item card's, for its save and damage buttons. Spells that affect only allies or enemies take only those. While placing, faint arrows show who will be targeted."
+      },
       "Rerolls": {
         "Name": "Rerolls",
         "Hint": "Who can click a die in a roll's breakdown to roll it again. The new result is used; an info card in chat shows the change and can undo it.",

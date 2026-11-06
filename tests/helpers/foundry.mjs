@@ -370,12 +370,12 @@ export class Message {
   getAssociatedActivity() {
     return this.activity ?? null;
   }
-  async update(changes) {
+  async update(changes, options = {}) {
     for ( const [key, value] of Object.entries(changes) ) {
       if ( key === "rolls" ) this.rolls = value.map(data => Roll.fromData(data));
       else setProperty(this, key, value);
     }
-    Hooks.callAll("updateChatMessage", this, changes);
+    Hooks.callAll("updateChatMessage", this, changes, options);
     return this;
   }
   async unsetFlag(scope, key) {

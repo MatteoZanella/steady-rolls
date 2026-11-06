@@ -9,6 +9,7 @@ Foundry VTT v14 module for dnd5e 6.
 - Rolls with several d20s show each die, the kept one highlighted.
 - Advantage, disadvantage and critical damage can be switched after the roll, keeping the dice already rolled.
 - A die can be rerolled from the roll's breakdown. The old value stays there crossed out: clicking it, or Undo on the info card in chat, goes back to it.
+- Placing an area of effect targets the tokens inside, for the item card's save and damage buttons too; while placing, the tokens it will target are previewed.
 - Optional fast-forward per roll type, automatic damage (never, on hit, always) and automatic save damage.
 - With Dice So Nice, cards appear at once and show their results when the dice land.
 

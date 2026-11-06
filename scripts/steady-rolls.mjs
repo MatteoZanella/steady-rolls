@@ -10,6 +10,7 @@
  * - rebuild.mjs: rolls rebuilt with their dice kept and changed one at a time, for both
  * - dice.mjs: results masked while Dice So Nice rolls
  * - labels.mjs: names of the bonuses in d20 breakdowns
+ * - targets.mjs: the tokens inside a placed template targeted, on the user and the item card
  * - settings.mjs: settings and the fast-forward menu
  */
 import { MODULE_ID, TEMPLATES, named } from "./common.mjs";
@@ -23,6 +24,10 @@ import {
   addOwnCardButtons, hostOf, onPostUseActivity, onPreCreateMessage, onRollAttack, refreshCards,
   withOwnCard, withStrikeAttack, withStrikeCascade, withStrikeUsage
 } from "./strikes.mjs";
+import {
+  onDestroyRegion, onPostCreateTemplate, onPostUseTemplate, onPreCreateTemplate, onPreUseTemplate, onRefreshRegion,
+  onUpdateCardTargets, withTemplateTargets
+} from "./targets.mjs";
 
 /** Summary template per roll message type. Healing has the damage card's layout. */
 const SUMMARY_TEMPLATES = {
@@ -132,7 +137,7 @@ function register(config) {
   }
   if ( models.attack ) models.attack = withStrikeAttack(models.attack);
   for ( const type of ["damage", "healing"] ) if ( models[type] ) models[type] = withOwnCard(models[type]);
-  models.usage = withStrikeUsage(models.usage);
+  models.usage = withTemplateTargets(withStrikeUsage(models.usage));
   models[REROLL_TYPE] = rerollCardModel();
   if ( config.ChatMessage.documentClass ) {
     config.ChatMessage.documentClass = withStrikeCascade(config.ChatMessage.documentClass);
@@ -171,6 +176,13 @@ Hooks.once("init", () => {
   Hooks.on("dnd5e.preRollV2", onPreRoll);
   Hooks.on("dnd5e.preUseActivity", onPreUseActivity);
   Hooks.on("dnd5e.postUseActivity", onPostUseActivity);
+  Hooks.on("dnd5e.preUseActivity", onPreUseTemplate);
+  Hooks.on("dnd5e.preCreateMeasuredTemplate", onPreCreateTemplate);
+  Hooks.on("refreshRegion", onRefreshRegion);
+  Hooks.on("destroyRegion", onDestroyRegion);
+  Hooks.on("dnd5e.postCreateMeasuredTemplate", onPostCreateTemplate);
+  Hooks.on("updateChatMessage", onUpdateCardTargets);
+  Hooks.on("dnd5e.postUseActivity", onPostUseTemplate);
   Hooks.on("dnd5e.postBuildD20TestRollConfig", onPostBuildD20);
   // Last, after the listeners of other modules, which may still add parts to the roll.
   Hooks.once("ready", () => Hooks.on("dnd5e.postBuildRollConfig", onPostBuildRoll));

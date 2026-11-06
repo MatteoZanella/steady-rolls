@@ -17,6 +17,7 @@ export function hasDamage(activity) {
 
 /** Name a subclass after its base, for readable stacks and class names. */
 export function named(Subclass, Base) {
-  Object.defineProperty(Subclass, "name", { value: `SteadyRolls${Base.name}` });
+  const name = Base.name.startsWith("SteadyRolls") ? Base.name : `SteadyRolls${Base.name}`;
+  Object.defineProperty(Subclass, "name", { value: name });
   return Subclass;
 }
