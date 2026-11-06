@@ -294,11 +294,12 @@ async function askToStop() {
 
 /**
  * destroyRegion: placement over, the arrows go; if cancelled, the targets come back. Foundry
- * destroys a cancelled preview while its placement is still open, a placed one after.
+ * destroys a cancelled preview while its placement is still open, a skipped one (a right-click
+ * without asking) emptied of its shape, a placed one after, with it.
  */
 export function onDestroyRegion(region) {
   if ( !placement?.previews.delete(region) ) return;
-  if ( canvas.regions._placementContext ) placement.cancelled = true;
+  if ( canvas.regions._placementContext || !region.document.shapes.length ) placement.cancelled = true;
   if ( placement.previews.size ) return;
   if ( placement.cancelled && placement.targets ) {
     canvas.tokens.setTargets(placement.targets);

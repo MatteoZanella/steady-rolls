@@ -95,6 +95,23 @@ describe("refreshCards", () => {
   });
 });
 
+describe("refreshCards on saves", () => {
+  it("draws the usage card from scratch when a save changes, so its damage halves for who saved", async () => {
+    const { refreshCards } = await load();
+    const usage = usageCard();
+    const save = await roll(usage, "save");
+    const damage = await roll(usage, "damage");
+    usage.reset = vi.fn();
+    ui.chat.updateMessage.mockClear();
+    refreshCards(save, { rolls: [] }); // Advantage switched.
+    expect(usage.reset).toHaveBeenCalled();
+    expect(ui.chat.updateMessage.mock.calls.map(([m]) => m.id)).toEqual([usage.id, damage.id]);
+    usage.reset.mockClear();
+    refreshCards(save, { flags: {} }); // Not its outcome.
+    expect(usage.reset).not.toHaveBeenCalled();
+  });
+});
+
 describe("withStrikeUsage", () => {
   async function buttons(usage) {
     const { withStrikeUsage } = await import("../scripts/strikes.mjs");

@@ -15,9 +15,9 @@ export function hasDamage(activity) {
   return !!activity?.damage?.parts?.length || !!activity?.item?.system.properties?.has("amm");
 }
 
-/** Whether a card is a save activity's. */
+/** Whether a card is a save activity's usage card, not one of its saves or damage rolls. */
 export function isSaveCard(card) {
-  return card?.getAssociatedActivity?.()?.type === "save";
+  return isUsage(card) && (card.getAssociatedActivity?.()?.type === "save");
 }
 
 /** The key of the token, or actor, that rolled a save: the token's uuid, or the actor's without one. */

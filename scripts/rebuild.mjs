@@ -11,7 +11,7 @@
  * dice cannot be tracked (pools, functions, random counts) are not rebuilt.
  */
 import { DAMAGE_TYPES, MODULE_ID } from "./common.mjs";
-import { diceSoNiceHides, isRolling, throwDice } from "./dice.mjs";
+import { diceSoNiceHides, isPlaying, isRolling, throwDice } from "./dice.mjs";
 
 /** Term option holding a damage die's position in the formula before critical scaling. */
 const SOURCE = "steadyRollsSource";
@@ -258,9 +258,12 @@ export async function onSaveRollsQuery({ message, data }, { user }) {
   return true;
 }
 
-/** Whether this user can change a message's rolls now: not while its dice roll. */
+/**
+ * Whether this user can change a message's rolls now: not while its dice roll, unless this client
+ * throws them (it reveals the rolls once the last throw lands).
+ */
 export function canChange(message) {
-  return canModify(message) && !isRolling(message);
+  return canModify(message) && (!isRolling(message) || isPlaying(message));
 }
 
 /**

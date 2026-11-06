@@ -56,6 +56,13 @@ describe("a target change", () => {
     });
   });
 
+  it("keeps a token that saved on a save card when it's untargeted", async () => {
+    const { changedTargets } = await load();
+    const card = new Message({ system: { targets: [descriptor("saved"), descriptor("other")] } });
+    const batch = new Map([[token("saved"), false], [token("other"), false]]);
+    expect(changedTargets(card, batch, false, new Set(["Scene.s.Token.saved"])).targets).toEqual([descriptor("saved")]);
+  });
+
   it("is shared by the card, its first attack and that attack's damage, not a later strike's", async () => {
     const { sharing } = await load();
     const first = new Message({ type: "attack" });

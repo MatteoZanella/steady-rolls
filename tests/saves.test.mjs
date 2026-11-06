@@ -23,7 +23,7 @@ class Usage {
 
 /** A save card whose saves were rolled by these token uuids. */
 function saveCard(rolledBy = []) {
-  const card = new Message({ activity: { type: "save" } });
+  const card = new Message({ activity: { type: "save" }, system: { rendersSummaries: true, targets: [] } });
   card.getAssociatedRolls = () => rolledBy.map(uuid => ({ getAssociatedToken: () => ({ uuid }) }));
   return card;
 }
@@ -130,13 +130,30 @@ describe("joining a save", () => {
     expect(canvas.tokens.setTargets).toHaveBeenCalledWith(["joiner"], { mode: "acquire" });
   });
 
-  it("gives the damage only the tokens that saved, not targets still to roll", async () => {
+  it("keeps both of two saves made together, though the card's update takes time", async () => {
     const { onSaveCardRoll } = await import("../scripts/saves.mjs");
-    const saved = save(doc("saved"));
-    const damage = new Message({ type: "damage", system: { targets: [{ token: "Scene.s.Token.saved" }, { token: "Scene.s.Token.waiting" }] } });
-    setup({ targets: [{ token: "Scene.s.Token.saved" }, { token: "Scene.s.Token.waiting" }], saves: [saved], damage: [damage] });
-    await onSaveCardRoll(damage);
-    expect(damage.system.targets).toEqual([{ token: "Scene.s.Token.saved" }]);
+    const saves = [save(doc("one")), save(doc("two"))];
+    const card = setup({ targets: [], saves, damage: [] });
+    const update = card.update.bind(card);
+    const delays = [20, 0]; // The first update lands last, if both are under way.
+    card.update = (...args) => new Promise(resolve => setTimeout(resolve, delays.shift())).then(() => update(...args));
+    let joined = 1; // The second save is made while the first joins.
+    card.getAssociatedRolls = type => ((type === "save") ? saves.slice(0, joined) : []);
+    const first = onSaveCardRoll(saves[0]);
+    joined = 2;
+    await Promise.all([first, onSaveCardRoll(saves[1])]);
+    expect(card.system.targets.map(t => t.token)).toEqual(["Scene.s.Token.one", "Scene.s.Token.two"]);
+  });
+
+  it("gives the damage the card's targets from the start, before anyone saves, and as they change", async () => {
+    const { onSaveCardRoll, onSaveCardTargets } = await import("../scripts/saves.mjs");
+    const damage = new Message({ type: "damage", system: { targets: [] } });
+    const card = setup({ targets: [{ token: "Scene.s.Token.waiting" }], saves: [], damage: [damage] });
+    await onSaveCardRoll(damage); // Rolled at once, as automatic save damage is.
+    expect(damage.system.targets).toEqual([{ token: "Scene.s.Token.waiting" }]);
+    card.system.targets = [{ token: "Scene.s.Token.waiting" }, { token: "Scene.s.Token.followed" }];
+    await onSaveCardTargets(card, { system: { targets: card.system.targets } });
+    expect(damage.system.targets).toEqual(card.system.targets);
   });
 });
 

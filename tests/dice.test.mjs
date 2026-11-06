@@ -132,6 +132,23 @@ describe("playDice", () => {
     expect(game.dice3d.animateRoll).toHaveBeenCalledWith({ dice: ["attack die"] }, attack);
   });
 
+  it("reveals a roll thrown again before it lands only when its last throw lands", async () => {
+    const { isPlaying, throwDice, diceLanded } = await load();
+    const throws = [];
+    game.dice3d.animateRoll = vi.fn(() => new Promise(resolve => throws.push(resolve)));
+    const attack = rolled("attack");
+    throwDice([attack]);
+    throwDice([attack], ["second die"]); // Advantage switched while the first die rolls.
+    expect(isPlaying(attack)).toBe(true);
+    throws[0]();
+    await new Promise(resolve => setTimeout(resolve));
+    expect(attack.getFlag(MODULE, "rolling")).toBeDefined();
+    throws[1]();
+    await diceLanded(attack);
+    expect(attack.getFlag(MODULE, "rolling")).toBeUndefined();
+    expect(isPlaying(attack)).toBe(false);
+  });
+
   it("leaves rolls made by other users, and rolls not marked, to their own client", async () => {
     const { playDice } = await always();
     const theirs = rolled("damage");

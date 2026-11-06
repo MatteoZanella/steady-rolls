@@ -24,7 +24,7 @@ import { SAVE_ROLLS_QUERY, onPostBuildRoll, onPostDamageRollConfiguration, onSav
 import { REROLL_TYPE, decorateRerolls, refreshRerollCards, rerollCardModel } from "./rerolls.mjs";
 import { markApplied, onApplyDamage, onPreApplyDamage, onRecordQuery } from "./applied.mjs";
 import { onCreateCard, onTargetToken } from "./follow.mjs";
-import { onSaveCardRoll, refreshSaveSubjects, withSaveList } from "./saves.mjs";
+import { maskSaveOutcomes, onSaveCardRoll, onSaveCardTargets, refreshSaveSubjects, withSaveList } from "./saves.mjs";
 import { onPreRoll, onPreUseActivity, registerSettings } from "./settings.mjs";
 import {
   addOwnCardButtons, hostOf, onPostUseActivity, onPreCreateMessage, onRollAttack, refreshCards,
@@ -164,6 +164,7 @@ Hooks.once("init", () => {
   // renderChatMessageHTML, so its own hook is used.
   Hooks.on("dnd5e.renderChatMessage", (message, html) => {
     html.addEventListener("recorded-targets:build", markApplied, { capture: true });
+    html.addEventListener("recorded-targets:build", maskSaveOutcomes, { capture: true });
     addOwnCardButtons(message, html);
     decorate(message, html);
     for ( const summary of html.querySelectorAll(".card-summary[data-message-id]") ) {
@@ -176,9 +177,9 @@ Hooks.once("init", () => {
     Hooks.on("diceSoNiceMessagePreProcess", onDiceSoNicePreProcess);
     Hooks.on("createChatMessage", playDice);
   }
-  for ( const event of ["createChatMessage", "updateChatMessage", "deleteChatMessage"] ) {
-    Hooks.on(event, refreshCards);
-  }
+  Hooks.on("createChatMessage", message => refreshCards(message));
+  Hooks.on("updateChatMessage", refreshCards);
+  Hooks.on("deleteChatMessage", message => refreshCards(message));
   Hooks.on("updateChatMessage", (message, changes) => { if ( "rolls" in changes ) refreshRerollCards(message); });
   Hooks.on("deleteChatMessage", refreshRerollCards);
   Hooks.on("dnd5e.rollAttackV2", onRollAttack);
@@ -196,6 +197,7 @@ Hooks.once("init", () => {
   Hooks.on("controlToken", foundry.utils.debounce(refreshSaveSubjects, 50));
   Hooks.on("createChatMessage", onSaveCardRoll);
   Hooks.on("deleteChatMessage", onSaveCardRoll);
+  Hooks.on("updateChatMessage", onSaveCardTargets);
   Hooks.on("dnd5e.preApplyDamage", onPreApplyDamage);
   Hooks.on("dnd5e.applyDamage", onApplyDamage);
   Hooks.on("targetToken", onTargetToken);

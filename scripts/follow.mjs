@@ -3,10 +3,11 @@
  * you made with targets, until you make another. A card's targeting is shared by the messages
  * that make it up: the usage card (or a strike card), its attack, and the damage rolled for it.
  * - attacks: their hit or miss is recomputed against the new targets;
- * - save cards: damage targets are the tokens that saved instead (saves.mjs);
+ * - save cards: their damage follows the card's targets (saves.mjs, onSaveCardTargets);
  * - checks have no targets to follow.
  * Once damage was applied from a card, it is done: untargeting removes no one, and a token
- * targeted is added for now. When you make another card, those added for now leave it, unless
+ * targeted is added for now. On a save card, untargeting never removes a token that saved: its
+ * save is on the card, and its damage is still to apply. When you make another card, those added for now leave it, unless
  * they took damage from it (or saved, on a save card): targeting for your next action doesn't stay
  * on the last one. Added for now: `flags.steady-rolls.provisional`, token uuids.
  * Changes made while placing a template are the template's (targets.mjs).
@@ -68,8 +69,11 @@ function involvedIn(group, card) {
   };
 }
 
-/** A message's targets after the changes, and those added for now: see the module's doc. */
-export function changedTargets(message, batch, done) {
+/**
+ * A message's targets after the changes, and those added for now: see the module's doc.
+ * @param {Set<string>} [kept]  Tokens untargeting doesn't remove: those that saved on a save card.
+ */
+export function changedTargets(message, batch, done, kept = new Set()) {
   const { TargetsField } = dnd5e.dataModels.chatMessage.fields;
   let targets = message.system.targets;
   let provisional = message.getFlag(MODULE_ID, "provisional") ?? [];
@@ -79,7 +83,7 @@ export function changedTargets(message, batch, done) {
       targets = [...targets, ...TargetsField.getDescriptors([token])];
       if ( done ) provisional = [...provisional, token.uuid];
     }
-    else if ( !targeted && present && (!done || provisional.includes(token.uuid)) ) {
+    else if ( !targeted && present && !kept.has(token.uuid) && (!done || provisional.includes(token.uuid)) ) {
       targets = targets.filter(t => t.token !== token.uuid);
       provisional = provisional.filter(uuid => uuid !== token.uuid);
     }
@@ -94,7 +98,7 @@ async function write(message, { targets, provisional }) {
   await message.update({ "system.targets": targets, [`flags.${MODULE_ID}.provisional`]: provisional }, TARGETS_UPDATE);
 }
 
-/** The messages of a card whose targets follow: on a save card, not its damage. */
+/** The messages of a card whose targets follow: on a save card, not its damage, which takes the card's. */
 function following(card) {
   return sharing(card).filter(m => !(isSaveCard(card) && DAMAGE_TYPES.has(m.type))
     && m.canUserModify(game.user, "update"));
@@ -107,7 +111,8 @@ async function flush() {
   const card = newestCard();
   if ( !card ) return;
   const done = isDone(sharing(card));
-  for ( const message of following(card) ) await write(message, changedTargets(message, batch, done));
+  const kept = isSaveCard(card) ? rolledOn(card) : new Set();
+  for ( const message of following(card) ) await write(message, changedTargets(message, batch, done, kept));
 }
 
 /**

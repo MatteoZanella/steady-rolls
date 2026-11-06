@@ -118,7 +118,7 @@ describe("the card's target list", () => {
 describe("placing a template", () => {
   /** A template preview as dnd5e has Foundry draw it: not restricted. */
   const preview = () => ({ isPreview: true, renderFlags: { set: vi.fn() }, document: {
-    parent: scene, flags: { core: { MeasuredTemplate: true } }, shapes: [], _source: { shapes: [] }, restriction: { enabled: false },
+    parent: scene, flags: { core: { MeasuredTemplate: true } }, shapes: [{ type: "circle" }], _source: { shapes: [] }, restriction: { enabled: false },
     toObject: () => ({ shapes: [] }),
     updateSource(changes) { Object.assign(this, changes); },
     updateShapeConstraints() { this.constrained = !!this.restriction?.enabled; }
@@ -176,6 +176,19 @@ describe("placing a template", () => {
     release();
     expect(context.onMove({ shape: { type: "line" } })).toBe(false); // Held still while asking.
     await vi.waitFor(() => expect(canvas.regions._cancelPlacement).toHaveBeenCalled());
+  });
+
+  it("brings the targets back when a right-click skips the template, and follows the user's again", async () => {
+    const { isTemplating, onDestroyRegion, onPreCreateTemplate, onRefreshRegion } = await load();
+    await game.settings.set("steady-rolls", "templates", { targets: true, stop: false });
+    const shown = preview();
+    onPreCreateTemplate(activity("creature"));
+    onRefreshRegion(shown);
+    canvas.regions._placementContext = null; // Foundry ends the placement, the preview emptied.
+    shown.document.shapes = [];
+    onDestroyRegion(shown);
+    expect(canvas.tokens.setTargets).toHaveBeenLastCalledWith(["ally"]);
+    expect(isTemplating()).toBe(false);
   });
 
   it("leaves the targets to the placed template", async () => {

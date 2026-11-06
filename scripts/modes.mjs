@@ -6,7 +6,7 @@
  * and keeps a breakdown open across the redraw that a switch or reroll causes.
  */
 import { MODULE_ID } from "./common.mjs";
-import { isRolling } from "./dice.mjs";
+import { isPlaying, isRolling } from "./dice.mjs";
 import {
   breakdownsOf, buildD20, buildDamage, canChange, canModify, changeRolls, diceOf, evaluateWith, isFixed, keyed,
   locateResults, rebuildKind, throwAll
@@ -55,15 +55,17 @@ export function decorateRolls(message, root, own = null) {
   if ( message.type === "damage" ) showCritical(message, root, own, buttons[0]);
   if ( !canModify(message) ) return showResist(message, root, own, buttons[0]);
   // While its new dice roll, a roll keeps its toggles in place, inert, so they don't vanish and come back.
+  // Advantage can switch on the client throwing them: the new die is thrown at once.
   const rolling = isRolling(message);
   const act = onClick => (rolling ? null : onClick);
+  const actNow = onClick => ((rolling && !isPlaying(message)) ? null : onClick);
   if ( switchesAdvantage(message) ) {
     const { ADVANTAGE, DISADVANTAGE, NORMAL } = CONFIG.Dice.D20Roll.ADV_MODE;
     buttons.forEach((button, index) => {
       const current = message.rolls[index]?.options.advantageMode;
       if ( current === undefined ) return;
       const toggle = (mode, icon, label) => modeButton(icon, label, current === mode,
-        act(() => setAdvantage(message, index, (current === mode) ? NORMAL : mode)));
+        actNow(() => setAdvantage(message, index, (current === mode) ? NORMAL : mode)));
       onBar(button, toggle(DISADVANTAGE, "fa-angles-down", "DND5E.Disadvantage"),
         toggle(ADVANTAGE, "fa-angles-up", "DND5E.Advantage"));
     });
@@ -311,12 +313,18 @@ export async function replaceRoll(message, index, cause, build, changes = () => 
   return { old, roll };
 }
 
-/** Switch one d20 roll to advantage, disadvantage or normal. */
+/**
+ * Switch one d20 roll to advantage, disadvantage or normal. While its first die still rolls, the
+ * new roll is masked whole: its kept die is not known before both land.
+ */
 function setAdvantage(message, index, mode) {
+  const whole = isRolling(message);
   return replaceRoll(message, index, "advantage", async old => {
     const roll = buildD20(old, mode);
-    return { roll, dice: await evaluateWith([old], [roll]) };
-  }, rolls => ({ flavor: advantageFlavor(message.flavor, rolls) }));
+    const dice = await evaluateWith([old], [roll]);
+    if ( whole ) delete roll.options[MODULE_ID].fresh;
+    return { roll, dice };
+  }, rolls => ({ flavor: advantageFlavor(message.flavor, rolls), mask: whole }));
 }
 
 /**

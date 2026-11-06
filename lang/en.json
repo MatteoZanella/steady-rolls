@@ -102,8 +102,8 @@
     "ResistNone": "No Legendary Resistance left",
     "StopArea": {
       "Title": "Measured Template",
-      "Content": "Roll {item} without placing its measured template?",
-      "Stop": "Skip to Roll",
+      "Content": "Use {item} without placing its measured template?",
+      "Stop": "Skip to Use",
       "Keep": "Keep Placing"
     }
   },

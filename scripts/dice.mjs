@@ -119,14 +119,24 @@ export function releaseDice(attack) {
   if ( waiting.delete(attack?.id) ) throwDice([attack]);
 }
 
-/** One throw for several messages (all their dice, unless given), then reveal them together. */
+/**
+ * One throw for several messages (all their dice, unless given), then reveal them together. A
+ * message thrown again before it lands (advantage switched while its die rolls) is revealed by
+ * its latest throw.
+ */
 export function throwDice(messages, dice = messages.flatMap(m => m.rolls.flatMap(roll => roll.dice))) {
+  const latest = m => playing.get(m.id) === animation;
   const animation = game.dice3d.animateRoll({ dice }, messages[0])
     .catch(err => console.error(`${MODULE_ID} | Dice So Nice animation failed`, err))
-    .then(() => Promise.all(messages.filter(m => game.messages.has(m.id) && m.getFlag(MODULE_ID, "rolling"))
+    .then(() => Promise.all(messages.filter(m => latest(m) && game.messages.has(m.id) && m.getFlag(MODULE_ID, "rolling"))
       .map(m => m.unsetFlag(MODULE_ID, "rolling"))))
-    .finally(() => messages.forEach(m => playing.delete(m.id)));
+    .finally(() => messages.filter(latest).forEach(m => playing.delete(m.id)));
   for ( const m of messages ) playing.set(m.id, animation);
+}
+
+/** Whether this client is throwing a message's dice now. */
+export function isPlaying(message) {
+  return playing.has(message?.id);
 }
 
 /** Resolves when this client's animation of a message ends (at once if none). */

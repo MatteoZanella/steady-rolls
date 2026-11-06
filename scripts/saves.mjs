@@ -9,9 +9,11 @@
  * `evaluatedTargets`.
  * A token that saves without being targeted joins the card's targets (written by the active GM,
  * or the card's author without one), and the caster's targets while it is their newest card. The
- * card's damage targets are the tokens that saved.
+ * card's damage has the card's targets, as dnd5e's Damage button gives it: from the start, before
+ * anyone saves, and whenever they change (a template, a skipped one, targets followed, a joiner).
  */
 import { TARGETS_UPDATE, isSaveCard, named, rolledOn, rollerOf } from "./common.mjs";
+import { isRolling } from "./dice.mjs";
 import { newestCard } from "./follow.mjs";
 
 /** A token's or actor's key on a card: the token's uuid, or the actor's without a token. */
@@ -166,6 +168,7 @@ function showSubjects(button, card) {
   if ( !names.length ) text.replaceChildren(game.i18n.localize("STEADY_ROLLS.Save.SelectTokens"));
   else text.replaceChildren(...names.flatMap((n, i) => i ? [", ", n] : [n]));
   button.disabled = !names.length || subjects.every(s => rolled.has(keyOf(s)));
+  button.toggleAttribute("data-tooltip", !button.disabled); // Inactive: no tooltip either.
 }
 
 /** controlToken: the Save buttons' subjects follow the selection. */
@@ -174,6 +177,43 @@ export function refreshSaveSubjects() {
     const card = game.messages.get(button.closest("[data-message-id]")?.dataset.messageId);
     if ( card ) showSubjects(button, card);
   }
+}
+
+/* -------------------------------------------- */
+/*  Apply tray                                  */
+/* -------------------------------------------- */
+
+const PENDING = '<i class="fa-solid fa-hourglass-half" inert></i>';
+const ROLLING = '<i class="fa-solid fa-dice-d20 steady-rolls-spinner" inert></i>';
+
+/**
+ * recorded-targets:build, caught on the way down as it doesn't bubble: in the Apply tray of a save
+ * card's damage, the amounts of a target that hasn't rolled its save show an hourglass, and of one
+ * whose save still rolls a tumbling die; then no multiplier shows pressed. A full amount would be
+ * wrong before the save, and either would tell who saved. Drawn again as saves are made and land
+ * (strikes.mjs, refreshCards).
+ */
+export function maskSaveOutcomes(event) {
+  const list = event.target;
+  const tray = list.closest?.("damage-application");
+  const card = tray && game.messages.get(list.closest("[data-message-id]")?.dataset.messageId)?.system?.origin;
+  if ( !isSaveCard(card) ) return;
+  const rolled = rolledOn(card);
+  const rolling = new Set(card.getAssociatedRolls("save").filter(isRolling).map(rollerOf));
+  // Only the card's targets have a save to wait for: others (Selected) keep their amounts.
+  const waiting = new Set(card.system.targets.flatMap(t => [t.token, t.actor]).filter(uuid => uuid && !rolled.has(uuid)));
+  let masked = false;
+  for ( const pill of list.querySelectorAll("target-pill") ) {
+    const uuids = Array.from(pill.querySelectorAll("option"), o => o.value);
+    const icon = uuids.some(uuid => waiting.has(uuid)) ? PENDING : (uuids.some(uuid => rolling.has(uuid)) ? ROLLING : null);
+    if ( !icon ) continue;
+    masked = true;
+    for ( const value of pill.querySelectorAll(".calculated .value") ) value.innerHTML = icon;
+  }
+  // dnd5e presses the multipliers in use once the event reaches the list, after this.
+  if ( masked ) queueMicrotask(() => {
+    for ( const button of tray.querySelectorAll(".multiplier-row .multiplier-button") ) button.ariaPressed = "false";
+  });
 }
 
 /* -------------------------------------------- */
@@ -186,10 +226,21 @@ function writesFor(card) {
   return gm ? gm.isSelf : !!card.author?.isSelf;
 }
 
+/** Joins in progress, per card: saves made together join one after another, none lost. */
+const joins = new Map();
+
 /** createChatMessage and deleteChatMessage, for saves and damage on a save card: see the module's doc. */
-export async function onSaveCardRoll(message) {
+export function onSaveCardRoll(message) {
   const card = message.system?.origin;
-  if ( !["save", "damage"].includes(message.type) || !isSaveCard(card) || !game.messages.has(card.id) ) return;
+  if ( !["save", "damage"].includes(message.type) || !isSaveCard(card) ) return;
+  const next = (joins.get(card.id) ?? Promise.resolve()).then(() => join(card));
+  joins.set(card.id, next.catch(() => {}));
+  return next;
+}
+
+/** A card's savers become its targets, and its damage's. */
+async function join(card) {
+  if ( !game.messages.has(card.id) ) return;
   const { TargetsField } = dnd5e.dataModels.chatMessage.fields;
   const saved = TargetsField.getDescriptors(card.getAssociatedRolls("save").map(m => m.getAssociatedToken()).filter(Boolean));
   const known = new Set(card.system.targets.map(t => t.token));
@@ -199,9 +250,22 @@ export async function onSaveCardRoll(message) {
     if ( ids.length ) canvas.tokens.setTargets(ids, { mode: "acquire" });
   }
   if ( !writesFor(card) ) return;
+  // The card's new targets reach its damage through onSaveCardTargets.
   if ( joined.length ) await card.update({ "system.targets": [...card.system.targets, ...joined] }, TARGETS_UPDATE);
+  else await giveDamageTargets(card);
+}
+
+/** updateChatMessage: a save card's targets changed, so do its damage's. */
+export function onSaveCardTargets(card, changes) {
+  if ( !isSaveCard(card) || !foundry.utils.hasProperty(changes, "system.targets") || !writesFor(card) ) return;
+  return giveDamageTargets(card);
+}
+
+/** The card's damage gets the card's targets, if it has others. */
+async function giveDamageTargets(card) {
   const tokens = targets => targets.map(t => t.token).sort().join();
   for ( const damage of card.getAssociatedRolls("damage") ) {
-    if ( tokens(damage.system.targets) !== tokens(saved) ) await damage.update({ "system.targets": saved }, TARGETS_UPDATE);
+    if ( tokens(damage.system.targets) === tokens(card.system.targets) ) continue;
+    await damage.update({ "system.targets": foundry.utils.deepClone(card.system.targets) }, TARGETS_UPDATE);
   }
 }

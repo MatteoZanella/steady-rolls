@@ -56,6 +56,7 @@ function isOwnCard(message) {
 /** The card that shows a roll: its usage card or its strike card. Null if not folded. */
 export function hostOf(message) {
   const usage = message.system?.origin;
+  const live = isUsage(usage) && game.messages.has(usage.id);
   if ( !isUsage(usage) || isStrikeCard(message) || isOwnCard(message) ) return null;
   if ( DAMAGE_TYPES.has(message.type) ) {
     const attack = game.messages.get(message.getFlag(MODULE_ID, "attack"));
@@ -94,6 +95,7 @@ function openActions(host) {
 /** Number the attack, or link the damage to the latest attack, as the message is created. */
 export function onPreCreateMessage(message) {
   const usage = message.system?.origin;
+  const live = isUsage(usage) && game.messages.has(usage.id);
   if ( !isUsage(usage) ) return;
   if ( (message.type === "attack") && (message.getFlag(MODULE_ID, "strike") === undefined) ) {
     message.updateSource({ [`flags.${MODULE_ID}.strike`]: latestStrike(usage) + 1 });
@@ -105,13 +107,14 @@ export function onPreCreateMessage(message) {
 }
 
 /**
- * On message create, update and delete: re-render the cards affected. dnd5e refreshes only
- * the usage card; strike card buttons depend on the other attacks.
+ * On message create, update (with its changes) and delete: re-render the cards affected. dnd5e
+ * refreshes only the usage card; strike card buttons depend on the other attacks.
  */
 export function refreshCards(message, changes) {
   // Each card once, and not the message itself, which Foundry redraws: a second redraw would
   // close the breakdown shown again after a change (modes.mjs).
   const cards = new Set();
+  const createdOrDeleted = !changes;
   // Rolls changed (a switch, a reroll), or dice landed: the card showing the roll.
   changes ??= {};
   const landed = foundry.utils.hasProperty(changes, `flags.${MODULE_ID}`) && !message.getFlag(MODULE_ID, "rolling");
@@ -120,7 +123,17 @@ export function refreshCards(message, changes) {
   const host = (changed || ("system" in changes)) ? hostOf(message) : null;
   if ( host && (changed || !isUsage(host)) ) cards.add(host);
   const usage = message.system?.origin;
-  if ( isUsage(usage) && game.messages.has(usage.id) ) {
+  const live = isUsage(usage) && game.messages.has(usage.id);
+  // A save made, changed (advantage, a reroll, Legendary Resistance) or deleted: dnd5e caches the
+  // usage card's outcomes, which halve the damage of those who saved; drawn again from scratch,
+  // with its damage.
+  const saveChanged = createdOrDeleted || changed || ("system" in changes);
+  if ( live && (message.type === "save") && saveChanged ) {
+    usage.reset();
+    cards.add(usage);
+    for ( const damage of usage.getAssociatedRolls("damage") ) cards.add(damage);
+  }
+  if ( live ) {
     for ( const attack of usage.getAssociatedRolls("attack") ) {
       if ( isStrikeCard(attack) && (attack.id !== message.id) ) cards.add(attack);
     }
@@ -314,6 +327,7 @@ export function withOwnCard(Base) {
 let ownCardButtons;
 export function addOwnCardButtons(message, html) {
   const usage = message.system?.origin;
+  const live = isUsage(usage) && game.messages.has(usage.id);
   if ( !isOwnCard(message) || !isUsage(usage) || !usage.getAssociatedActivity() ) return;
   const buttonGroups = usage.system.strikeButtonGroups?.(message);
   if ( foundry.utils.isEmpty(buttonGroups ?? {}) ) return;

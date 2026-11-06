@@ -142,10 +142,17 @@
 :is(.chat-log, .chat-popout) .message.compact .steady-rolls-mode[aria-pressed="true"] {
   color: var(--dnd5e-color-gold);
 }
-/* A toggle that can't act keeps its state and tooltip, without lighting up or inviting a click. */
-:is(.chat-log, .chat-popout) .message.compact .steady-rolls-mode[aria-disabled="true"] {
+/*
+ * A button that can't be pressed (disabled, or a toggle that can't act), in every card: as at rest
+ * when hovered (Foundry lights up disabled buttons too), no glow, the not-allowed cursor. A tooltip
+ * stays only where it tells why. A roll still rolling keeps its progress cursor.
+ */
+:is(.chat-log, .chat-popout) .message button:is(:disabled, [aria-disabled="true"]) {
+  --button-hover-background-color: var(--button-background-color);
+  --button-hover-border-color: var(--button-border-color);
+  --button-hover-text-color: var(--button-text-color);
   box-shadow: none;
-  cursor: default;
+  cursor: not-allowed;
 }
 /*
  * The critical toggle is a status: at the bar's start, where dnd5e shows a roll's outcome icons,
@@ -356,10 +363,8 @@
 }
 /* In the breakdown: a new die still rolling tumbles, and the total it changes is a tumbling d20. */
 :is(.chat-log, .chat-popout) .message .roll-breakdown li.roll.steady-rolls-tumbling,
-:is(.chat-log, .chat-popout) .message .roll-breakdown .steady-rolls-spinner {
+:is(.chat-log, .chat-popout) .message :is(.roll-breakdown, damage-application) .steady-rolls-spinner {
   animation: steady-rolls-tumble 1.2s linear infinite;
-}
-:is(.chat-log, .chat-popout) .message .roll-breakdown .steady-rolls-spinner {
   color: var(--color-text-primary);
   display: inline-block;
   font-size: 0.8em;
@@ -371,7 +376,7 @@
   :is(.chat-log, .chat-popout) .message.compact button.dice-roll.steady-rolls-rolling .total i,
   :is(.chat-log, .chat-popout) .message.compact button.dice-roll .steady-rolls-tumbling > i,
   :is(.chat-log, .chat-popout) .message .roll-breakdown li.roll.steady-rolls-tumbling,
-  :is(.chat-log, .chat-popout) .message .roll-breakdown .steady-rolls-spinner,
+  :is(.chat-log, .chat-popout) .message :is(.roll-breakdown, damage-application) .steady-rolls-spinner,
   .dice-tooltip .dice-rolls li.roll:is(.steady-rolls-rerollable, .steady-rolls-undoing),
   .dice-tooltip .dice-rolls li.roll:is(.steady-rolls-rerollable, .steady-rolls-undoing) > .steady-rolls-face,
   .dice-tooltip .dice-rolls li.roll.steady-rolls-undoing::after {
@@ -420,7 +425,7 @@
 :is(.chat-log, .chat-popout) .message.compact .card-summary .save-summary.steady-rolls-roll > .pills {
   flex: 0 0 32%;
   justify-content: flex-start;
-  margin-inline-start: 4px; /* Inside the hover box. */
+  margin-inline-start: 10px; /* The name inset in its box. */
   min-inline-size: 0;
 }
 :is(.chat-log, .chat-popout) .message.compact .card-summary .save-summary.steady-rolls-roll > .pills > .pill {
@@ -433,8 +438,11 @@
  * Save list: a roll's own row, made compact and read from the right. A save rolled has its name
  * and result in one box, as a roll's (background; gold border on hover), the row's icon staying
  * outside as on a roll's row. No gold lines, no d20 (the breakdown has them): the outcome, then
- * the total in a slot at the box's end, its toggles either side at the same distance. A target
- * still to roll has no box: its button, or an hourglass, sits in that slot.
+ * the total in a slot at the box's end, its toggles either side at the same distance; the whole
+ * box is the roll's button, opening the breakdown. A target still to roll has the box unfilled,
+ * and the box is its roll button (its owner's), with a shield, or an hourglass, in the total's
+ * slot. The name is plain text: a pill would be a box in the box. The boxes part the rows,
+ * without dnd5e's dashed lines between summaries.
  * dnd5e's icon row: a 15px icon, then an 8px gap.
  */
 :is(.chat-log, .chat-popout) .message.compact .save-summary.steady-rolls-roll {
@@ -445,8 +453,11 @@
   isolation: isolate;
   position: relative;
 }
-:is(.chat-log, .chat-popout) .message.compact .save-summary.steady-rolls-roll:has(button.dice-roll)::before {
-  background: var(--dnd5e-chat-button-background);
+:is(.chat-log, .chat-popout) .message.compact .card-summary:has(> .save-summary.steady-rolls-roll) {
+  border-block-start: none;
+  padding-block-start: 0;
+}
+:is(.chat-log, .chat-popout) .message.compact .save-summary.steady-rolls-roll::before {
   border: 1px solid var(--dnd5e-chat-button-border);
   border-radius: 4px;
   content: "";
@@ -454,7 +465,37 @@
   position: absolute;
   z-index: -1;
 }
-:is(.chat-log, .chat-popout) .message.compact .save-summary.steady-rolls-roll:has(button.dice-roll:is(:hover, :focus-visible))::before {
+:is(.chat-log, .chat-popout) .message.compact .save-summary.steady-rolls-roll:has(button.dice-roll)::before {
+  background: var(--dnd5e-chat-button-background);
+}
+/* dnd5e's delete button of a save (Shift held), in the icon's place: outside the box, above its overlay, the row unmoved. */
+:is(.chat-log, .chat-popout) .message.compact .save-summary.steady-rolls-roll > .message-delete {
+  inline-size: 15px;
+  inset-block: 0;
+  inset-inline-start: 0;
+  position: absolute;
+  z-index: 1;
+}
+:is(.chat-popout, #chat-log, .chat-log)[data-modifier-shift] .message .save-summary.steady-rolls-roll:has(> .message-delete) > i:first-child {
+  visibility: hidden;
+}
+:is(.chat-log, .chat-popout) .message.compact .save-summary.steady-rolls-roll > .pills > .pill {
+  background: none;
+  border: none;
+  padding-inline: 0;
+}
+/* The box is the row's button: the roll's (its breakdown) or, still to roll, the save's. */
+:is(.chat-log, .chat-popout) .message.compact .save-summary.steady-rolls-roll > .steady-rolls-bar,
+:is(.chat-log, .chat-popout) .message.compact .save-summary.steady-rolls-roll :is(button.dice-roll, .steady-rolls-pending > button) {
+  position: static;
+}
+:is(.chat-log, .chat-popout) .message.compact .save-summary.steady-rolls-roll :is(button.dice-roll, .steady-rolls-pending > button)::after {
+  content: "";
+  inset: 0 0 0 23px;
+  position: absolute;
+}
+:is(.chat-log, .chat-popout) .message.compact .save-summary.steady-rolls-roll:has(
+  :is(button.dice-roll, .steady-rolls-pending > button):not(:disabled):is(:hover, :focus-visible))::before {
   border-color: var(--dnd5e-color-gold);
 }
 :is(.chat-log, .chat-popout) .message.compact .card-summary .save-summary.steady-rolls-roll button.dice-roll {
@@ -507,6 +548,13 @@
 }
 :is(.chat-log, .chat-popout) .message.compact .steady-rolls-pending > span {
   color: var(--color-text-secondary);
+}
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-pending > button {
+  --button-background-color: transparent;
+  --button-border-color: transparent;
+  --button-hover-background-color: transparent;
+  --button-hover-border-color: transparent;
+  box-shadow: none; /* Foundry's hover glow: the box lights up instead. */
 }
 /* The card's Save button: one line, whom it rolls for. */
 :is(.chat-log, .chat-popout) .message.compact .steady-rolls-save-roll {
