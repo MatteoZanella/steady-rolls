@@ -5,23 +5,23 @@
       "damage": "Damage again, on its own card",
       "healing": "Healing again, on its own card"
     },
-    "Changed": "The roll changed meanwhile: try again.",
-    "CriticalFixed": "Critical can't be switched: another module changed this damage after it was built.",
+    "Changed": "Someone changed this roll at the same time. Try again.",
+    "CriticalFixed": "Critical can't be switched: another module changed this damage.",
     "Settings": {
       "AutoDamage": {
-        "Name": "Roll damage automatically",
-        "Hint": "For attacks rolled from an item card. On hit: at least one target must be hit.",
+        "Name": "Auto-roll damage",
+        "Hint": "Roll damage right after an attack.",
         "Never": "Never",
         "Hit": "On hit",
         "Always": "Always"
       },
       "AutoSaveDamage": {
-        "Name": "Roll save damage automatically",
-        "Hint": "For save activities, such as Fireball. Off: roll it with the Damage button once the saves are made, so no one weighs the damage before saving."
+        "Name": "Auto-roll save damage",
+        "Hint": "Roll save damage right away, without waiting for the saves."
       },
       "UseChoices": {
-        "Name": "Keep the item use dialog for choices",
-        "Hint": "While item use skips its dialog, still show it when there is something to choose: the spell slot of a leveled spell or of a feature like Divine Smite, how much of a resource to spend (Lay on Hands), or a facility order."
+        "Name": "Ask for choices",
+        "Hint": "Show the use dialog when there's something to choose."
       },
       "FastForward": {
         "Name": "Fast-forward rolls",
@@ -40,17 +40,38 @@
         },
         "All": "All"
       },
-      "TemplateTargets": {
-        "Name": "Target tokens in templates",
-        "Hint": "Once an area of effect is placed, the tokens inside become your targets and the item card's, for its save and damage buttons. Spells that affect only allies or enemies take only those. While placing, faint arrows show who will be targeted."
+      "Templates": {
+        "Name": "Area templates",
+        "Label": "Configure",
+        "Hint": "Choose how areas of effect are placed and shown.",
+        "targets": {
+          "Name": "Auto-target",
+          "Hint": "Tokens in a placed area become your targets."
+        },
+        "snap": {
+          "Name": "Snap to edges",
+          "Hint": "Areas snap to square corners and edges, and cover whole squares."
+        },
+        "colors": {
+          "Name": "Damage colors",
+          "Hint": "Areas take their damage type's color."
+        },
+        "outline": {
+          "Name": "Outline walls",
+          "Hint": "Make thin areas, like walls, visible."
+        },
+        "stop": {
+          "Name": "Confirm skip",
+          "Hint": "Right-click asks before skipping an area."
+        }
       },
       "FollowTargets": {
-        "Name": "Cards follow your targets",
-        "Hint": "Changing your targets also changes them on the newest card you made, its attack and its damage, until you make another card. Once damage is applied from it, untargeting removes no one, and new targets stay only if they take damage (or save) before your next card."
+        "Name": "Cards follow targets",
+        "Hint": "Your newest card follows your targets."
       },
       "Rerolls": {
         "Name": "Rerolls",
-        "Hint": "Who can click a die in a roll's breakdown to roll it again. The new result is used; an info card in chat shows the change and can undo it.",
+        "Hint": "Who can reroll a single die from a roll's breakdown.",
         "Off": "No one",
         "GM": "GM only",
         "Owner": "GM and the roll's owner"
@@ -75,9 +96,16 @@
     "Applied": {
       "Damage": "Took {amount} damage from this card",
       "Healing": "Healed {amount} by this card",
-      "Undo": "Click to undo"
+      "UndoDamage": "Undo {amount} damage from this card",
+      "UndoHealing": "Undo {amount} healing from this card"
     },
-    "ResistNone": "No Legendary Resistance left"
+    "ResistNone": "No Legendary Resistance left",
+    "StopArea": {
+      "Title": "Measured Template",
+      "Content": "Roll {item} without placing its measured template?",
+      "Stop": "Skip to Roll",
+      "Keep": "Keep Placing"
+    }
   },
   "TYPES": {
     "ChatMessage": {

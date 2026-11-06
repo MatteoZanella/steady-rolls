@@ -44,7 +44,8 @@ const utils = {
   hasProperty: (object, key) => getProperty(object, key) !== undefined,
   isEmpty: value => !value || (Object.keys(value).length === 0),
   randomID: () => `id${++ids}`,
-  getType: value => (typeof value === "function") ? "function" : typeof value
+  getType: value => (typeof value === "function") ? "function" : typeof value,
+  escapeHTML: value => String(value).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`)
 };
 
 /* -------------------------------------------- */
@@ -415,6 +416,7 @@ class Messages extends Map {
 
 // Foundry's addition to Math.
 Math.clamp ??= (value, min, max) => Math.min(Math.max(value, min), max);
+Math.toRadians ??= degrees => degrees * Math.PI / 180;
 
 function install() {
   faces = [];

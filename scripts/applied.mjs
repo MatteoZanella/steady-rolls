@@ -144,16 +144,15 @@ export function markApplied(event) {
     const amount = taken.reduce((sum, a) => sum + a, 0);
     pill.querySelector(".steady-rolls-applied")?.remove();
     if ( !amount ) continue;
-    const key = (amount > 0) ? "STEADY_ROLLS.Applied.Damage" : "STEADY_ROLLS.Applied.Healing";
     const actors = tokens.filter((t, i) => taken[i] && t?.actor?.isOwner).map(t => t.actor);
+    const key = `STEADY_ROLLS.Applied.${actors.length ? "Undo" : ""}${(amount > 0) ? "Damage" : "Healing"}`;
     const mark = document.createElement(actors.length ? "button" : "i");
     mark.className = "steady-rolls-applied";
     mark.dataset.tooltip = game.i18n.format(key, { amount: Math.abs(amount) });
     mark.innerHTML = '<i class="fa-solid fa-heart-crack" inert></i><i class="fa-solid fa-clock-rotate-left" inert></i>';
     if ( actors.length ) {
       mark.type = "button";
-      mark.ariaLabel = `${mark.dataset.tooltip}. ${game.i18n.localize("STEADY_ROLLS.Applied.Undo")}`;
-      mark.dataset.tooltip = mark.ariaLabel;
+      mark.ariaLabel = mark.dataset.tooltip;
       mark.addEventListener("click", async clicked => {
         clicked.stopPropagation();
         mark.disabled = true;

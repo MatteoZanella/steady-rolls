@@ -379,8 +379,9 @@
   }
 }
 
-/* Fast-forward settings: hint, then one column per roll type. */
-#steady-rolls-fast-forward .steady-rolls-fast-forward {
+/* Fast-forward settings: hint, then one column per roll type. Area templates: one option a row. */
+#steady-rolls-fast-forward .steady-rolls-fast-forward,
+#steady-rolls-templates .steady-rolls-templates {
   display: flex;
   flex-direction: column;
   gap: 12px;

@@ -6,8 +6,14 @@ Notable changes, newest first ([Keep a Changelog](https://keepachangelog.com), v
 
 ### Added
 
-- Placing an area of effect targets the tokens inside, on your targets and on the item card, so its save and damage buttons use them. Spells that affect only allies or enemies take only those. While placing, your targets are released and the tokens it will target show faint target arrows; cancelling brings your targets back. A client setting turns it off.
+- Placing an area of effect targets the tokens inside, on your targets and on the item card, so its save and damage buttons use them. Spells that affect only allies or enemies take only those. While placing, your targets are released and the tokens it will target show faint target arrows, walls taken into account; cancelling brings your targets back.
 - Save cards have a saves section before the damage: the DC, then a row per target, by name, with its result or, where its total will be, a roll button for its owner (an hourglass for others). Below, a button that rolls for your selected tokens, or your character's token on the scene, and names them; a token that already rolled is struck through and not rolled again (reroll its dice instead). A save you can't see shows its total as "?".
+- While an area of effect is being placed, its preview is cut by walls, as the placed area will be (dnd5e's own preview ignores them).
+- Areas snap to square corners and edges, not centres, and cover whole squares: a 5 ft line along a grid line covers one row, not two. Moved later, they keep it.
+- Areas thinner than a square, like Prismatic Wall, cover no square: they are drawn as their shape, with an outline thick enough to see.
+- An area of effect can take the color of its damage or healing type, like orange for fire, instead of your player color (off by default).
+- Right-clicking while placing an area of effect asks whether to roll without it, and dragging with the right button pans the map. Escape still skips the area at once.
+- These area aids can each be switched on or off in the client setting "Area templates": Auto-target, Snap to edges, Damage colors, Outline walls, Confirm skip.
 - Legendary Resistance on a save is a toggle, like critical: on a failed save with uses left it turns the save into a success and spends a use; switched off, the use comes back. It replaces dnd5e's Resist button, in the save list and on the save's own card.
 - The owner of an actor can switch advantage and reroll on its rolls even when someone else rolled them (the GM saves the change).
 - A token that saves without being targeted joins the save card's targets, and the caster's targets while it is their newest card. A save card's damage goes to the tokens that saved.

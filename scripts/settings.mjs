@@ -1,6 +1,6 @@
 /**
- * Settings: fast-forward per roll type (one setting, typed by its schema), automatic damage,
- * targets from templates, rerolls.
+ * Settings: fast-forward per roll type and area template aids (one setting each, typed by
+ * its schema, in a menu), automatic damage, following targets, rerolls.
  * Fast-forward is set in dnd5e's pre-roll hooks, which run before dnd5e reads its skip-dialog
  * keys (`dialog.configure ??=`); the skip-dialog key then shows the dialog instead.
  */
@@ -23,6 +23,16 @@ function fastForwardSchema() {
       initial: true, label: "STEADY_ROLLS.Settings.UseChoices.Name", hint: "STEADY_ROLLS.Settings.UseChoices.Hint"
     })
   });
+}
+
+/** Area template aids, each on its own; damage colors off by default. */
+const TEMPLATE_AIDS = ["targets", "snap", "colors", "outline", "stop"];
+
+function templatesSchema() {
+  const { BooleanField, SchemaField } = foundry.data.fields;
+  return new SchemaField(Object.fromEntries(TEMPLATE_AIDS.map(aid => [aid, new BooleanField({
+    initial: aid !== "colors", label: `STEADY_ROLLS.Settings.Templates.${aid}.Name`, hint: `STEADY_ROLLS.Settings.Templates.${aid}.Hint`
+  })])));
 }
 
 export function registerSettings() {
@@ -50,10 +60,14 @@ export function registerSettings() {
     hint: "STEADY_ROLLS.Settings.AutoSaveDamage.Hint",
     scope: "client", config: true, type: Boolean, default: true
   });
-  game.settings.register(MODULE_ID, "templateTargets", {
-    name: "STEADY_ROLLS.Settings.TemplateTargets.Name",
-    hint: "STEADY_ROLLS.Settings.TemplateTargets.Hint",
-    scope: "client", config: true, type: Boolean, default: true
+  game.settings.register(MODULE_ID, "templates", { scope: "client", config: false, type: templatesSchema() });
+  game.settings.registerMenu(MODULE_ID, "templatesMenu", {
+    name: "STEADY_ROLLS.Settings.Templates.Name",
+    label: "STEADY_ROLLS.Settings.Templates.Label",
+    hint: "STEADY_ROLLS.Settings.Templates.Hint",
+    icon: "fa-solid fa-bullseye",
+    type: TemplatesConfig,
+    restricted: false
   });
   game.settings.register(MODULE_ID, "followTargets", {
     name: "STEADY_ROLLS.Settings.FollowTargets.Name",
@@ -75,6 +89,11 @@ export function registerSettings() {
 /** A fast-forward choice: a roll type, or "useChoices". */
 export function fastForward(choice) {
   return !!game.settings.get(MODULE_ID, "fastForward")[choice];
+}
+
+/** Whether an area template aid is on. */
+export function templateAid(aid) {
+  return !!game.settings.get(MODULE_ID, "templates")[aid];
 }
 
 /** The keys bound to a dnd5e action, with left and right modifier keys named once ("Shift"). */
@@ -183,5 +202,35 @@ class FastForwardConfig extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #onSubmit(event, form, formData) {
     const value = { ...game.settings.get(MODULE_ID, "fastForward"), ...formData.object };
     await game.settings.set(MODULE_ID, "fastForward", value);
+  }
+}
+
+/** Area template aids, one checkbox each. */
+class TemplatesConfig extends HandlebarsApplicationMixin(ApplicationV2) {
+  static DEFAULT_OPTIONS = {
+    id: "steady-rolls-templates",
+    tag: "form",
+    window: { title: "STEADY_ROLLS.Settings.Templates.Name", contentClasses: ["standard-form"] },
+    position: { width: 520 },
+    form: { handler: TemplatesConfig.#onSubmit, closeOnSubmit: true }
+  };
+
+  static PARTS = {
+    form: { template: `${TEMPLATES}/templates-config.hbs` },
+    footer: { template: "templates/generic/form-footer.hbs" }
+  };
+
+  /** @override */
+  async _prepareContext() {
+    const values = game.settings.get(MODULE_ID, "templates");
+    const { fields } = game.settings.settings.get(`${MODULE_ID}.templates`).type;
+    return {
+      aids: TEMPLATE_AIDS.map(aid => ({ field: fields[aid], name: aid, value: values[aid] })),
+      buttons: [{ type: "submit", icon: "fa-solid fa-floppy-disk", label: "SETTINGS.Save" }]
+    };
+  }
+
+  static async #onSubmit(event, form, formData) {
+    await game.settings.set(MODULE_ID, "templates", formData.object);
   }
 }

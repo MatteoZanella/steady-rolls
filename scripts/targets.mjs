@@ -4,9 +4,15 @@
  * targets are what its save and damage buttons use. An activity that affects allies or enemies
  * only takes those, by disposition, as dnd5e's region behaviors do. While the template is being
  * placed, the user's targets are released and the tokens it would target show faint target
- * arrows, drawn only on this client; cancelling brings the targets back.
+ * arrows, drawn only on this client, with walls taken into account as on the placed template;
+ * cancelling brings the targets back. The preview itself is drawn cut by walls too, as the placed
+ * template will be: dnd5e's preview ignores them. Area template aids, each on its own: the
+ * targets; snapping to square corners and edges, ties going one way; a template in its damage
+ * type's colour; areas thinner than a square (walls) outlined; a right-click while placing asking
+ * before skipping the template.
  */
 import { MODULE_ID, TARGETS_UPDATE, named } from "./common.mjs";
+import { templateAid } from "./settings.mjs";
 
 /** Item cards whose Place Template button was clicked, by activity uuid. */
 const placing = new Map();
@@ -34,7 +40,7 @@ export function tokensInside(activity, regions) {
 }
 
 function enabled() {
-  return game.settings.get(MODULE_ID, "templateTargets");
+  return templateAid("targets");
 }
 
 /** Write targets to an item card, if this user can. */
@@ -88,24 +94,202 @@ function showArrows(tokens) {
   for ( const token of shown ) if ( !arrows.has(token) ) arrows.set(token, token.addChild(previewArrows(token)));
 }
 
-/** dnd5e.preCreateMeasuredTemplate: an activity's template is about to be placed. */
-export function onPreCreateTemplate(activity) {
-  if ( enabled() ) placement = { activity, previews: new Set() };
+/**
+ * dnd5e.preCreateMeasuredTemplate: an activity's template is about to be placed. It takes the
+ * colour of its damage type (an aid), in its preview and once placed (onCreateTemplate).
+ */
+export function onPreCreateTemplate(activity, config) {
+  const color = templateAid("colors") && damageColor(activity);
+  if ( color && config ) config.color = color;
+  placement = { activity, previews: new Set(), targeting: enabled() };
+}
+
+/** The colour of an activity's first damage or healing type, as dnd5e defines it, as CSS. */
+export function damageColor(activity) {
+  const { damageTypes, healingTypes } = CONFIG.DND5E;
+  const parts = [...(activity.damage?.parts ?? []), ...(activity.healing ? [activity.healing] : [])];
+  for ( const part of parts ) {
+    for ( const type of part.types ?? [] ) {
+      const color = (damageTypes[type] ?? healingTypes[type])?.color;
+      if ( color ) return color.css;
+    }
+  }
+  return null;
 }
 
 /**
- * refreshRegion: while a template is placed, arrows on the tokens its previews would target. The
- * user's targets are released when the first preview shows, and kept to restore on cancel.
+ * refreshRegion, for dnd5e's templates: thin ones outlined (an aid). Its previews are cut by walls,
+ * as the placed template, with arrows on the tokens they would target (an aid), the user's targets
+ * released when the first preview shows and kept to restore on cancel.
  */
 export function onRefreshRegion(region) {
-  if ( !placement || !region.isPreview || !foundry.utils.getProperty(region.document.flags, "core.MeasuredTemplate") ) return;
-  if ( !placement.previews.size && !placement.targets ) {
+  const flags = region.document.flags;
+  const preview = !!placement && region.isPreview && !!foundry.utils.getProperty(flags, "core.MeasuredTemplate");
+  if ( !preview && !flags.dnd5e?.activity ) return;
+  const outlined = templateAid("outline");
+  if ( outlined && preview ) drawThin(region);
+  outline(region, outlined);
+  if ( !preview ) return;
+  drawAsPlaced(region);
+  joinPlacement(region);
+  placement.previews.add(region);
+  if ( !placement.targeting ) return;
+  if ( !placement.targets ) {
     templating = true;
     placement.targets = Array.from(game.user.targets, t => t.id);
     canvas.tokens.setTargets([]);
   }
-  placement.previews.add(region);
-  showArrows(tokensInside(placement.activity, [...placement.previews].map(r => r.document)));
+  showArrows(tokensInside(placement.activity, [...placement.previews].map(p => p.document)));
+}
+
+/** dnd5e's placed template: restricted for movement, so walls cut it. Its preview isn't. */
+const RESTRICTION = { enabled: true, type: "move" };
+
+/**
+ * Draw a preview as dnd5e will place it: restricted like the placed template, on the viewed level.
+ * Foundry's own region code computes the wall cut, again as it moves and turns, as for the placed
+ * template and for one dragged; dnd5e takes just the preview's shapes when it is placed.
+ */
+function drawAsPlaced(preview) {
+  if ( preview.document.restriction.enabled ) return;
+  preview.document.updateSource({ levels: [canvas.level.id], restriction: RESTRICTION });
+  preview.document.updateShapeConstraints();
+  preview.renderFlags.set({ refreshShapes: true });
+}
+
+/** A preview of thin lines covers no square: drawn as its shape, as the placed template (onCreateTemplate). */
+function drawThin(preview) {
+  const document = preview.document;
+  if ( (document.highlightMode === "shapes") || !document.shapes.length || !document.shapes.every(isThin) ) return;
+  document.updateSource({ highlightMode: "shapes" });
+  preview.renderFlags.set({ refresh: true });
+}
+
+/** Whether a template's line is thinner than a square: it covers none. */
+function isThin(shape) {
+  return (shape.type === "line") && (shape.width < canvas.grid.size);
+}
+
+/** dnd5e.createMeasuredTemplate: the placed template looks as its preview: colour, thin lines. */
+export function onCreateTemplate(activity, regions) {
+  const color = templateAid("colors") && damageColor(activity);
+  for ( const region of regions ) {
+    if ( color ) region.color = color;
+    if ( templateAid("outline") && region.shapes?.length && region.shapes.every(isThin) ) region.highlightMode = "shapes";
+  }
+}
+
+/** Outlines of thin templates: a wall an inch thick is drawn 2.5 px wide on a 150 px grid. */
+const outlines = new WeakMap();
+
+/** Outline a template of thin lines, so it shows; its area stays the same. Off: no outline. */
+function outline(region, on) {
+  let graphics = outlines.get(region);
+  const shapes = region.document.shapes;
+  if ( !on || !shapes.length || !shapes.every(isThin) ) return graphics?.clear();
+  if ( !graphics || graphics.destroyed ) {
+    graphics = region.addChildAt(new PIXI.Graphics(), 0);
+    graphics.eventMode = "none";
+    outlines.set(region, graphics);
+  }
+  graphics.clear().lineStyle({ width: 6 * canvas.dimensions.uiScale, color: region.document.color, alpha: 0.8 });
+  for ( const polygon of region.document.polygons ) graphics.drawShape(polygon);
+}
+
+/* -------------------------------------------- */
+/*  Foundry's placement                         */
+/* -------------------------------------------- */
+
+/** The open question whether to stop placing, if any. */
+let asking = null;
+
+/**
+ * Join Foundry's placement through the callbacks dnd5e leaves unset. onMove snaps the template to
+ * square corners and edges (an aid), and holds it still while asking whether to skip it. preSkip:
+ * Foundry skips a template on a right press, so a right drag can't pan; instead a right click (a
+ * release where the map didn't pan) asks first (an aid). Escape still skips at once.
+ */
+function joinPlacement(preview) {
+  const context = canvas.regions._placementContext;
+  if ( context?.preview !== preview ) return;
+  context.onMove ??= onPlacementMove;
+  if ( templateAid("stop") ) context.preSkip ??= onRightPress;
+}
+
+/** Snapping on a square's corners and edges, not its centre: an area's origin, as the rules place it. */
+function edges() {
+  const M = CONST.GRID_SNAPPING_MODES;
+  return M.VERTEX | M.EDGE_MIDPOINT;
+}
+
+/** Shapes placed by their origin; an emanation follows its token. */
+const PLACED = new Set(["circle", "cone", "ellipse", "line", "rectangle", "ring"]);
+
+function onPlacementMove({ shape, position, snap }) {
+  if ( asking ) return false;
+  if ( !snap || !templateAid("snap") || canvas.grid.isGridless || !PLACED.has(shape.type) ) return;
+  const snapped = canvas.grid.getSnappedPoint(position, { mode: edges() });
+  shape.move(nudge(snapped, canvas.grid));
+  return false;
+}
+
+/**
+ * Off a grid point, so no square's centre lies on the edge of an area along the grid: a tie the
+ * half-square rule can't settle, which Foundry counts for both squares (a 5 ft line along a grid
+ * line covers two rows). Every tie then goes one way. Just past Foundry's 0.75 px tolerance.
+ */
+const NUDGE = { x: 0.8, y: 0.8 };
+
+/** A point on a grid corner, edge or centre, nudged off it; any other point as it is. */
+export function nudge(point, grid) {
+  const M = CONST.GRID_SNAPPING_MODES;
+  const key = grid.getSnappedPoint(point, { mode: M.CENTER | edges() });
+  if ( (key.x !== point.x) || (key.y !== point.y) ) return { x: point.x, y: point.y };
+  return { x: point.x + NUDGE.x, y: point.y + NUDGE.y };
+}
+
+/**
+ * preUpdateRegion: a placed template moved later, with the region tools, is nudged off the grid
+ * point Foundry snapped it to (an aid), on its own scene's grid.
+ */
+export function onPreUpdateRegion(region, changes) {
+  const grid = region.parent?.grid;
+  if ( !region.flags.dnd5e?.activity || !changes.shapes || !templateAid("snap") || !grid || grid.isGridless ) return;
+  for ( const shape of changes.shapes ) if ( PLACED.has(shape.type) ) Object.assign(shape, nudge(shape, grid));
+}
+
+function onRightPress() {
+  const { x, y } = canvas.stage.pivot;
+  const release = event => {
+    if ( event.button !== 2 ) return;
+    window.removeEventListener("pointerup", release, true);
+    if ( (canvas.stage.pivot.x === x) && (canvas.stage.pivot.y === y) ) askToStop();
+  };
+  window.addEventListener("pointerup", release, true);
+  return false;
+}
+
+/** Whether a dnd5e template is being placed. */
+function isPlacing() {
+  return !!placement?.previews.size && !!canvas.regions._placementContext;
+}
+
+/** Ask whether to stop placing the template; if so, cancel the placement. */
+async function askToStop() {
+  if ( asking || !isPlacing() ) return;
+  const item = foundry.utils.escapeHTML(placement.activity.item?.name ?? "");
+  asking = foundry.applications.api.DialogV2.confirm({
+    window: { title: "STEADY_ROLLS.StopArea.Title" },
+    content: `<p>${game.i18n.format("STEADY_ROLLS.StopArea.Content", { item })}</p>`,
+    yes: { label: "STEADY_ROLLS.StopArea.Stop", icon: "fa-solid fa-forward" },
+    no: { label: "STEADY_ROLLS.StopArea.Keep", icon: "fa-solid fa-bullseye", class: "bright" },
+    modal: true
+  });
+  try {
+    if ( await asking ) canvas.regions._cancelPlacement();
+  } finally {
+    asking = null;
+  }
 }
 
 /**
@@ -116,7 +300,7 @@ export function onDestroyRegion(region) {
   if ( !placement?.previews.delete(region) ) return;
   if ( canvas.regions._placementContext ) placement.cancelled = true;
   if ( placement.previews.size ) return;
-  if ( placement.cancelled ) {
+  if ( placement.cancelled && placement.targets ) {
     canvas.tokens.setTargets(placement.targets);
     templating = false;
   }

@@ -31,8 +31,8 @@ import {
   withOwnCard, withStrikeAttack, withStrikeCascade, withStrikeUsage
 } from "./strikes.mjs";
 import {
-  onDestroyRegion, onPostCreateTemplate, onPostUseTemplate, onPreCreateTemplate, onPreUseTemplate, onRefreshRegion,
-  withTemplateTargets
+  onCreateTemplate, onDestroyRegion, onPostCreateTemplate, onPostUseTemplate, onPreCreateTemplate, onPreUseTemplate,
+  onRefreshRegion, onPreUpdateRegion, withTemplateTargets
 } from "./targets.mjs";
 
 /** Summary template per roll message type. Healing has the damage card's layout. */
@@ -187,8 +187,10 @@ Hooks.once("init", () => {
   Hooks.on("dnd5e.postUseActivity", onPostUseActivity);
   Hooks.on("dnd5e.preUseActivity", onPreUseTemplate);
   Hooks.on("dnd5e.preCreateMeasuredTemplate", onPreCreateTemplate);
+  Hooks.on("dnd5e.createMeasuredTemplate", onCreateTemplate);
   Hooks.on("refreshRegion", onRefreshRegion);
   Hooks.on("destroyRegion", onDestroyRegion);
+  Hooks.on("preUpdateRegion", onPreUpdateRegion);
   Hooks.on("dnd5e.postCreateMeasuredTemplate", onPostCreateTemplate);
   Hooks.on("updateChatMessage", onTargetsUpdate);
   Hooks.on("controlToken", foundry.utils.debounce(refreshSaveSubjects, 50));
