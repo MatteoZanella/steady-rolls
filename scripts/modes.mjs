@@ -53,7 +53,7 @@ export function decorateRolls(message, root, own = null) {
   markBreakdowns(message, root, own);
   showAgain(message, root, own);
   if ( message.type === "damage" ) showCritical(message, root, own, buttons[0]);
-  if ( !canModify(message) ) return;
+  if ( !canModify(message) ) return showResist(message, root, own, buttons[0]);
   // While its new dice roll, a roll keeps its toggles in place, inert, so they don't vanish and come back.
   const rolling = isRolling(message);
   const act = onClick => (rolling ? null : onClick);
@@ -78,6 +78,71 @@ export function decorateRolls(message, root, own = null) {
     toggle?.classList.add("critical");
     if ( toggle ) onBar(buttons[0], toggle, null);
   }
+  showResist(message, root, own, buttons[0]);
+}
+
+/**
+ * Legendary Resistance on a save, as a status toggle like critical, in place of dnd5e's Resist
+ * button: on, the failed save counts as a success and a use is spent (dnd5e's resistSave); off
+ * again, the use comes back. Shown only on a failed save (one without a DC can't fail) or one
+ * resisted, for actors with Legendary Resistance; to others only once resisted. Without uses left
+ * it stays inert, and says so; a death save resisted stays resisted (dnd5e also changes its tallies).
+ */
+function showResist(message, root, own, button) {
+  const actor = message.getAssociatedActor?.();
+  if ( !button || (message.type !== "save") || !actor?.system.resources?.legres?.max ) return;
+  for ( const resist of root.querySelectorAll('button[data-action="resistSave"]') ) {
+    if ( resist.closest(".card-summary") !== own ) continue;
+    // On the save's own card, in dnd5e's button row: its item, and the row if nothing is left.
+    const item = resist.parentElement?.matches("li") ? resist.parentElement : resist;
+    const row = item.closest("section.icon-row");
+    item.remove();
+    if ( row && !row.querySelector("button") ) row.remove();
+  }
+  const resisted = !!message.system.resisted;
+  const failed = message.rolls.some(r => r.isFailure);
+  let toggle;
+  if ( !resisted && !failed ) return; // Nothing to resist: a success, or a save without a DC.
+  if ( actor.isOwner && message.canUserModify(game.user, "update") ) {
+    const left = actor.system.resources.legres.value > 0;
+    const canResist = !resisted && left;
+    const canUndo = resisted && (message.system.type !== "death");
+    const action = (canResist || canUndo) && !isRolling(message) ? () => setResisted(message, !resisted) : null;
+    const label = (resisted || left) ? "DND5E.LegendaryResistance.Action.Resist" : "STEADY_ROLLS.ResistNone";
+    toggle = modeButton("fa-dragon", label, resisted, action);
+  }
+  else if ( resisted ) {
+    toggle = document.createElement("span");
+    toggle.className = "steady-rolls-mode";
+    toggle.ariaLabel = game.i18n.localize("DND5E.LegendaryResistance.Resisted");
+    toggle.dataset.tooltip = "";
+    toggle.role = "img";
+    toggle.innerHTML = '<i class="fa-solid fa-dragon" inert></i>';
+  }
+  if ( !toggle ) return;
+  toggle.classList.add("resist");
+  let bar = button.closest(".steady-rolls-bar");
+  if ( !bar ) {
+    bar = document.createElement("span");
+    bar.className = "steady-rolls-bar";
+    button.replaceWith(bar);
+    bar.append(button);
+  }
+  bar.prepend(toggle);
+}
+
+/**
+ * Resist a failed save, spending a use (dnd5e's resistSave); or stop resisting it, giving the use
+ * back, in one batch as dnd5e does. The actor is read now: a token's actor is rebuilt on update.
+ */
+async function setResisted(message, resisted) {
+  const actor = message.getAssociatedActor();
+  if ( resisted ) return actor.system.resistSave(message);
+  const { spent } = actor.system.resources.legres;
+  return actor.performBulkUpdate({
+    actor: { "system.resources.legres.spent": Math.max(spent - 1, 0) },
+    operations: [{ action: "update", documentName: "ChatMessage", updates: [{ _id: message.id, "system.resisted": false }] }]
+  });
 }
 
 /**

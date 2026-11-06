@@ -40,7 +40,7 @@ function mergeObject(original, other = {}, { inplace = true } = {}) {
 
 let ids = 0;
 const utils = {
-  deepClone, getProperty, setProperty, mergeObject,
+  deepClone, getProperty, setProperty, mergeObject, debounce: fn => fn,
   hasProperty: (object, key) => getProperty(object, key) !== undefined,
   isEmpty: value => !value || (Object.keys(value).length === 0),
   randomID: () => `id${++ids}`,
@@ -397,6 +397,9 @@ class ChatMessageDataModel {
 
 /** A collection of messages, as game.messages. */
 class Messages extends Map {
+  get contents() {
+    return Array.from(this.values());
+  }
   add(...messages) {
     for ( const message of messages ) this.set(message.id, message);
     return messages[0];
@@ -409,6 +412,9 @@ class Messages extends Map {
 /* -------------------------------------------- */
 /*  Globals                                     */
 /* -------------------------------------------- */
+
+// Foundry's addition to Math.
+Math.clamp ??= (value, min, max) => Math.min(Math.max(value, min), max);
 
 function install() {
   faces = [];
@@ -428,7 +434,8 @@ function install() {
     CONFIG: {
       Dice: { D20Roll, DamageRoll, rolls: [Roll, DamageRoll, D20Roll] },
       DND5E: { abilities: { str: { label: "Strength" }, dex: { label: "Dexterity" } } },
-      ChatMessage: { dataModels: {} }
+      ChatMessage: { dataModels: {} },
+      queries: {}
     },
     game: {
       user: { id: "player", isGM: false, name: "Player" },

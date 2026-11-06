@@ -10,15 +10,21 @@
  * - rebuild.mjs: rolls rebuilt with their dice kept and changed one at a time, for both
  * - dice.mjs: results masked while Dice So Nice rolls
  * - labels.mjs: names of the bonuses in d20 breakdowns
+ * - saves.mjs: a save card's list of targets still to roll; its Save button rolls for the selection
+ * - follow.mjs: the newest card's targets follow the user's
+ * - applied.mjs: damage applied, recorded on its card, marked in its tray and undone from there
  * - targets.mjs: the tokens inside a placed template targeted, on the user and the item card
  * - settings.mjs: settings and the fast-forward menu
  */
-import { MODULE_ID, TEMPLATES, named } from "./common.mjs";
+import { MODULE_ID, TEMPLATES, named, onTargetsUpdate } from "./common.mjs";
 import { markRolling, maskRolling, onDiceSoNicePreProcess, playDice } from "./dice.mjs";
 import { labelBreakdowns, onPostBuildD20, onPreRollInitiative } from "./labels.mjs";
 import { decorateRolls } from "./modes.mjs";
-import { onPostBuildRoll, onPostDamageRollConfiguration } from "./rebuild.mjs";
+import { SAVE_ROLLS_QUERY, onPostBuildRoll, onPostDamageRollConfiguration, onSaveRollsQuery } from "./rebuild.mjs";
 import { REROLL_TYPE, decorateRerolls, refreshRerollCards, rerollCardModel } from "./rerolls.mjs";
+import { markApplied, onApplyDamage, onPreApplyDamage, onRecordQuery } from "./applied.mjs";
+import { onCreateCard, onTargetToken } from "./follow.mjs";
+import { onSaveCardRoll, refreshSaveSubjects, withSaveList } from "./saves.mjs";
 import { onPreRoll, onPreUseActivity, registerSettings } from "./settings.mjs";
 import {
   addOwnCardButtons, hostOf, onPostUseActivity, onPreCreateMessage, onRollAttack, refreshCards,
@@ -26,7 +32,7 @@ import {
 } from "./strikes.mjs";
 import {
   onDestroyRegion, onPostCreateTemplate, onPostUseTemplate, onPreCreateTemplate, onPreUseTemplate, onRefreshRegion,
-  onUpdateCardTargets, withTemplateTargets
+  withTemplateTargets
 } from "./targets.mjs";
 
 /** Summary template per roll message type. Healing has the damage card's layout. */
@@ -137,7 +143,7 @@ function register(config) {
   }
   if ( models.attack ) models.attack = withStrikeAttack(models.attack);
   for ( const type of ["damage", "healing"] ) if ( models[type] ) models[type] = withOwnCard(models[type]);
-  models.usage = withTemplateTargets(withStrikeUsage(models.usage));
+  models.usage = withTemplateTargets(withSaveList(withStrikeUsage(models.usage)));
   models[REROLL_TYPE] = rerollCardModel();
   if ( config.ChatMessage.documentClass ) {
     config.ChatMessage.documentClass = withStrikeCascade(config.ChatMessage.documentClass);
@@ -151,10 +157,13 @@ Hooks.once("init", () => {
   if ( game.system.id !== "dnd5e" ) return;
   registerSettings();
   if ( !register(CONFIG) ) return;
+  CONFIG.queries[`${MODULE_ID}.recordDamage`] = onRecordQuery;
+  CONFIG.queries[SAVE_ROLLS_QUERY] = onSaveRollsQuery;
   Hooks.on("preCreateChatMessage", onPreCreateMessage);
   // Every rendered message and the rolls folded into it. dnd5e renders its cards after
   // renderChatMessageHTML, so its own hook is used.
   Hooks.on("dnd5e.renderChatMessage", (message, html) => {
+    html.addEventListener("recorded-targets:build", markApplied, { capture: true });
     addOwnCardButtons(message, html);
     decorate(message, html);
     for ( const summary of html.querySelectorAll(".card-summary[data-message-id]") ) {
@@ -181,7 +190,14 @@ Hooks.once("init", () => {
   Hooks.on("refreshRegion", onRefreshRegion);
   Hooks.on("destroyRegion", onDestroyRegion);
   Hooks.on("dnd5e.postCreateMeasuredTemplate", onPostCreateTemplate);
-  Hooks.on("updateChatMessage", onUpdateCardTargets);
+  Hooks.on("updateChatMessage", onTargetsUpdate);
+  Hooks.on("controlToken", foundry.utils.debounce(refreshSaveSubjects, 50));
+  Hooks.on("createChatMessage", onSaveCardRoll);
+  Hooks.on("deleteChatMessage", onSaveCardRoll);
+  Hooks.on("dnd5e.preApplyDamage", onPreApplyDamage);
+  Hooks.on("dnd5e.applyDamage", onApplyDamage);
+  Hooks.on("targetToken", onTargetToken);
+  Hooks.on("createChatMessage", onCreateCard);
   Hooks.on("dnd5e.postUseActivity", onPostUseTemplate);
   Hooks.on("dnd5e.postBuildD20TestRollConfig", onPostBuildD20);
   // Last, after the listeners of other modules, which may still add parts to the roll.

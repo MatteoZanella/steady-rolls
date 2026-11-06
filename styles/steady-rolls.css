@@ -159,6 +159,21 @@
   color: var(--color-level-success);
   opacity: 1;
 }
+/*
+ * Legendary Resistance on a save: a status toggle like critical, at the bar's start, after dnd5e's
+ * outcome icon; in the save list, where the outcome sits by the total, at the box's start.
+ */
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-mode.resist {
+  inset-inline-end: auto;
+  inset-inline-start: 26px;
+}
+:is(.chat-log, .chat-popout) .message.compact .save-summary.steady-rolls-roll .steady-rolls-mode.resist {
+  inset-inline-start: 8px;
+}
+:is(.chat-log, .chat-popout) .message.compact span.steady-rolls-mode.resist {
+  color: var(--dnd5e-color-gold);
+  opacity: 1;
+}
 /* Native summaries (saves, checks) show only the total, at the row's end: toggles beside it. */
 :is(.chat-log, .chat-popout) .message.compact .card-summary .icon-row:not(.steady-rolls-roll)
   .steady-rolls-mode {
@@ -394,4 +409,137 @@
 }
 #steady-rolls-fast-forward .steady-rolls-column > input {
   margin: 0;
+}
+
+/*
+ * Save list. Names in a column of their own, so every box, and every total, lines up. A target
+ * still to roll has a button where its roll will be, the same box; the
+ * card's Save button is dnd5e's request-card button, with whom it rolls for on a second line.
+ */
+:is(.chat-log, .chat-popout) .message.compact .card-summary .save-summary.steady-rolls-roll > .pills {
+  flex: 0 0 32%;
+  justify-content: flex-start;
+  margin-inline-start: 4px; /* Inside the hover box. */
+  min-inline-size: 0;
+}
+:is(.chat-log, .chat-popout) .message.compact .card-summary .save-summary.steady-rolls-roll > .pills > .pill {
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/*
+ * Save list: a roll's own row, made compact and read from the right. A save rolled has its name
+ * and result in one box, as a roll's (background; gold border on hover), the row's icon staying
+ * outside as on a roll's row. No gold lines, no d20 (the breakdown has them): the outcome, then
+ * the total in a slot at the box's end, its toggles either side at the same distance. A target
+ * still to roll has no box: its button, or an hourglass, sits in that slot.
+ * dnd5e's icon row: a 15px icon, then an 8px gap.
+ */
+:is(.chat-log, .chat-popout) .message.compact .save-summary.steady-rolls-roll {
+  --steady-rolls-slot: 32px;
+  --steady-rolls-edge: 30px;
+  --steady-rolls-center: calc(var(--steady-rolls-edge) + var(--steady-rolls-slot) / 2);
+  --steady-rolls-gap: 22px; /* Between the outcome and the total's slot, room for a toggle. */
+  isolation: isolate;
+  position: relative;
+}
+:is(.chat-log, .chat-popout) .message.compact .save-summary.steady-rolls-roll:has(button.dice-roll)::before {
+  background: var(--dnd5e-chat-button-background);
+  border: 1px solid var(--dnd5e-chat-button-border);
+  border-radius: 4px;
+  content: "";
+  inset: 0 0 0 23px;
+  position: absolute;
+  z-index: -1;
+}
+:is(.chat-log, .chat-popout) .message.compact .save-summary.steady-rolls-roll:has(button.dice-roll:is(:hover, :focus-visible))::before {
+  border-color: var(--dnd5e-color-gold);
+}
+:is(.chat-log, .chat-popout) .message.compact .card-summary .save-summary.steady-rolls-roll button.dice-roll {
+  --button-background-color: transparent;
+  --button-border-color: transparent;
+  --button-hover-border-color: transparent;
+  gap: var(--steady-rolls-gap);
+  justify-content: flex-end;
+  padding-block: 3px;
+  padding-inline: 0 var(--steady-rolls-edge);
+}
+:is(.chat-log, .chat-popout) .message.compact .card-summary .save-summary.steady-rolls-roll button.dice-roll .icons {
+  position: static;
+}
+:is(.chat-log, .chat-popout) .message.compact .card-summary .save-summary.steady-rolls-roll button.dice-roll .result {
+  flex: none;
+  inline-size: var(--steady-rolls-slot);
+  justify-content: center;
+}
+:is(.chat-log, .chat-popout) .message.compact .card-summary .save-summary.steady-rolls-roll button.dice-roll .total::before,
+:is(.chat-log, .chat-popout) .message.compact .card-summary .save-summary.steady-rolls-roll button.dice-roll .total::after {
+  content: none;
+}
+:is(.chat-log, .chat-popout) .message.compact .card-summary .save-summary.steady-rolls-roll button.dice-roll .d20die {
+  display: none;
+}
+:is(.chat-log, .chat-popout) .message.compact .card-summary .save-summary.steady-rolls-roll .steady-rolls-mode.before {
+  inset-inline-end: calc(var(--steady-rolls-center) + 20px);
+}
+/* Its start edge 20px past the total's centre, as the other's end edge is before it. */
+:is(.chat-log, .chat-popout) .message.compact .card-summary .save-summary.steady-rolls-roll .steady-rolls-mode.after {
+  inset-inline-end: calc(var(--steady-rolls-center) - 20px);
+  inset-inline-start: auto;
+  translate: 100% -50%;
+}
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-bar.steady-rolls-pending {
+  block-size: 30px;
+  justify-content: flex-end;
+  padding-inline-end: var(--steady-rolls-edge);
+}
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-pending > :is(button, span) {
+  align-items: center;
+  block-size: 24px;
+  display: flex;
+  flex: none;
+  font-size: var(--font-size-12);
+  inline-size: var(--steady-rolls-slot);
+  justify-content: center;
+  padding: 0;
+}
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-pending > span {
+  color: var(--color-text-secondary);
+}
+/* The card's Save button: one line, whom it rolls for. */
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-save-roll {
+  margin-block-start: 6px;
+}
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-save-roll button {
+  gap: 6px;
+  text-transform: none;
+}
+:is(.chat-log, .chat-popout) .message.compact .steady-rolls-save-roll s {
+  opacity: 0.6;
+}
+
+/*
+ * Apply tray: a mark on the targets that took damage from this card. For their owner it is a
+ * button that undoes it: the undo icon shows on hover, the damage icon otherwise.
+ */
+damage-application target-pill .steady-rolls-applied {
+  background: none;
+  block-size: auto;
+  border: none;
+  color: var(--dnd5e-color-maroon);
+  display: inline-grid;
+  inline-size: auto;
+  margin-inline-end: 4px;
+  padding: 0;
+}
+damage-application target-pill .steady-rolls-applied > i {
+  grid-area: 1 / 1;
+}
+damage-application target-pill .steady-rolls-applied > i + i,
+damage-application target-pill button.steady-rolls-applied:is(:hover, :focus-visible) > i:first-child {
+  visibility: hidden;
+}
+damage-application target-pill button.steady-rolls-applied:is(:hover, :focus-visible) > i + i {
+  visibility: visible;
 }

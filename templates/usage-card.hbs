@@ -1,8 +1,79 @@
+{{!-- A save button's action: dnd5e's, or a group of them (several abilities) with its menu. --}}
+{{#*inline "saveAction"}}
+{{#if (and canGroup (not singleton))}}data-group data-forward-action="{{ action }}"
+{{else}}{{ dnd5e-dataset dataset }} data-action="{{ action }}" data-index="{{ index }}"{{/if}}
+{{/inline}}
 {{!-- dnd5e's usage card, with the buttons below the rolls. --}}
 {{#if content}}
 {{{ content }}}
 {{else}}
 {{> "dnd5e.card-face" buttonGroups=false }}
+{{/if}}
+
+{{#if saves}}
+{{!-- Saves: the DC, saves rolled, targets still to roll, and the Save button with whom it rolls for. --}}
+{{#with saves.dc}}
+<section class="icon-row">
+    <i class="fa-fw {{ icon }}" aria-label="{{ localize label }}"></i>
+    <ul class="pills unlist">
+        {{#each entries}}
+        <li class="pill transparent"><span class="label">{{ label }}</span></li>
+        {{/each}}
+    </ul>
+</section>
+{{/with}}
+{{!-- A save rolled, or a target still to roll: a roll button (its owner) or an hourglass where its total will be. --}}
+{{#each saves.rows}}
+{{#if html}}
+<div class="card-summary" data-message-id="{{ id }}" data-target-uuid="{{ token.uuid }}">{{{ html }}}</div>
+{{else if private}}
+<div class="card-summary">
+    <section class="icon-row save-summary steady-rolls-roll">
+        <i class="fa-fw fa-solid fa-dice" aria-label="{{ localize "DND5E.CHATMESSAGE.Row.Roll" }}"></i>
+        <ul class="pills unlist">
+            <li class="pill target transparent">{{ name }}</li>
+        </ul>
+        <span class="steady-rolls-bar">
+            <button type="button" class="dice-roll" disabled>
+                <span class="result"><strong class="total">?</strong></span>
+            </button>
+        </span>
+    </section>
+</div>
+{{else}}
+<div class="card-summary" data-target-uuid="{{ key }}">
+    <section class="icon-row save-summary steady-rolls-roll">
+        <i class="fa-fw fa-solid fa-dice" aria-label="{{ localize "DND5E.CHATMESSAGE.Row.Roll" }}"></i>
+        <ul class="pills unlist">
+            <li class="pill target transparent">{{ name }}</li>
+        </ul>
+        <span class="steady-rolls-bar steady-rolls-pending">
+            {{#if owner}}
+            {{#with ../saves.buttons.[0]}}
+            <button type="button" data-steady-rolls-save="{{ ../key }}" data-tooltip
+                aria-label="{{ ../../saves.label }}" {{> saveAction }}>
+                <i class="fa-solid fa-shield-heart" inert></i>
+            </button>
+            {{/with}}
+            {{else}}
+            <span data-tooltip aria-label="{{ localize "STEADY_ROLLS.Save.Pending" }}">
+                <i class="fa-solid fa-hourglass-half" inert></i>
+            </span>
+            {{/if}}
+        </span>
+    </section>
+</div>
+{{/if}}
+{{/each}}
+{{!-- The Save button: for the selected tokens or the character, named on it (saves.mjs). --}}
+{{#each saves.buttons}}
+<div class="card-buttons steady-rolls-save-roll">
+    <button type="button" data-tooltip aria-label="{{ ../saves.label }}" {{> saveAction }}>
+        <i class="fa-solid fa-shield-heart" inert></i>
+        <span class="steady-rolls-for"></span>
+    </button>
+</div>
+{{/each}}
 {{/if}}
 
 {{#each summaries}}
@@ -20,3 +91,4 @@
 {{#unless content}}
 {{> "dnd5e.card-buttons" }}
 {{/unless}}
+

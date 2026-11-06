@@ -43,7 +43,7 @@ function latestStrike(usage) {
 }
 
 /** Whether an attack has its own card: any attack after the first. */
-function isStrikeCard(message) {
+export function isStrikeCard(message) {
   return summariesOn() && (message?.type === "attack") && isUsage(message.system?.origin)
     && (strikeNumber(message) > 1);
 }
@@ -115,8 +115,10 @@ export function refreshCards(message, changes) {
   // Rolls changed (a switch, a reroll), or dice landed: the card showing the roll.
   changes ??= {};
   const landed = foundry.utils.hasProperty(changes, `flags.${MODULE_ID}`) && !message.getFlag(MODULE_ID, "rolling");
-  const host = (landed || ("rolls" in changes)) ? hostOf(message) : null;
-  if ( host ) cards.add(host);
+  // Its targets changed: a strike card showing it (dnd5e redraws a usage card for its system).
+  const changed = landed || ("rolls" in changes);
+  const host = (changed || ("system" in changes)) ? hostOf(message) : null;
+  if ( host && (changed || !isUsage(host)) ) cards.add(host);
   const usage = message.system?.origin;
   if ( isUsage(usage) && game.messages.has(usage.id) ) {
     for ( const attack of usage.getAssociatedRolls("attack") ) {

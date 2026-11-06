@@ -55,6 +55,11 @@ export function registerSettings() {
     hint: "STEADY_ROLLS.Settings.TemplateTargets.Hint",
     scope: "client", config: true, type: Boolean, default: true
   });
+  game.settings.register(MODULE_ID, "followTargets", {
+    name: "STEADY_ROLLS.Settings.FollowTargets.Name",
+    hint: "STEADY_ROLLS.Settings.FollowTargets.Hint",
+    scope: "client", config: true, type: Boolean, default: true
+  });
   game.settings.register(MODULE_ID, "rerolls", {
     name: "STEADY_ROLLS.Settings.Rerolls.Name",
     hint: "STEADY_ROLLS.Settings.Rerolls.Hint",

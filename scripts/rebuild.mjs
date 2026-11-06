@@ -231,9 +231,31 @@ export async function evaluateWith(oldRolls, rolls, { replace = [] } = {}) {
 /*  Changing                                    */
 /* -------------------------------------------- */
 
-/** Whether this user may change a message's rolls: its author or the GM, who can see its content. */
+/**
+ * Whether this user may change a message's rolls, if they can see its content: its author or the
+ * GM, who save the change themselves; or the owner of the actor who rolled, whose change the
+ * active GM saves (a save the GM rolled for a player's character).
+ */
 export function canModify(message) {
-  return message.canUserModify(game.user, "update") && message.isContentVisible;
+  if ( !message.isContentVisible ) return false;
+  return message.canUserModify(game.user, "update") || (ownsRoller(message, game.user) && !!game.users.activeGM);
+}
+
+/** Whether a user owns the actor who made a message's rolls. */
+function ownsRoller(message, user) {
+  return !!message.getAssociatedActor?.()?.testUserPermission(user, "OWNER");
+}
+
+export const SAVE_ROLLS_QUERY = `${MODULE_ID}.saveRolls`;
+
+/** CONFIG.queries: the GM saves a change of rolls made by the owner of the actor who rolled. */
+export async function onSaveRollsQuery({ message, data }, { user }) {
+  const target = game.messages.get(message);
+  if ( !target || !ownsRoller(target, user) ) return false;
+  const own = Object.keys(data).every(key => (key === "rolls") || key.startsWith(`flags.${MODULE_ID}.`));
+  if ( !own ) return false;
+  await target.update(data);
+  return true;
 }
 
 /** Whether this user can change a message's rolls now: not while its dice roll. */
@@ -290,7 +312,11 @@ async function save(message, rolls, dice, { mask = false, ...changes } = {}) {
   }
   const masked = (mask || (dice.length > 0)) && !!game.dice3d && diceSoNiceHides();
   if ( masked ) changes[`flags.${MODULE_ID}.rolling`] = game.time.serverTime;
-  await message.update({ ...changes, rolls: rolls.map(roll => roll.toJSON()) });
+  const data = { ...changes, rolls: rolls.map(roll => roll.toJSON()) };
+  if ( message.canUserModify(game.user, "update") ) await message.update(data);
+  else if ( !(await game.users.activeGM?.query(SAVE_ROLLS_QUERY, { message: message.id, data })) ) {
+    throw new Error("The GM did not save the change");
+  }
   return { message, dice, masked };
 }
 

@@ -102,7 +102,8 @@ describe("item card targets", () => {
 
 describe("the card's target list", () => {
   it("goes back to Targeted once the template's targets arrive, if dnd5e set it to Selected", async () => {
-    const { onPostUseTemplate, onUpdateCardTargets } = await load();
+    const { onPostUseTemplate } = await load();
+    const { onTargetsUpdate: onUpdateCardTargets } = await import("../scripts/common.mjs");
     scene.tokens = [token("foe", HOSTILE)];
     Hooks.on("updateChatMessage", onUpdateCardTargets);
     const card = game.messages.add(new Message({ _targetState: { mode: "selected" } }));

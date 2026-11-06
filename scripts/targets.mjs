@@ -6,7 +6,7 @@
  * placed, the user's targets are released and the tokens it would target show faint target
  * arrows, drawn only on this client; cancelling brings the targets back.
  */
-import { MODULE_ID, named } from "./common.mjs";
+import { MODULE_ID, TARGETS_UPDATE, named } from "./common.mjs";
 
 /** Item cards whose Place Template button was clicked, by activity uuid. */
 const placing = new Map();
@@ -41,17 +41,7 @@ function enabled() {
 function setCardTargets(card, tokens) {
   if ( !card?.id || !game.messages.has(card.id) || !card.canUserModify(game.user, "update") ) return;
   const { TargetsField } = dnd5e.dataModels.chatMessage.fields;
-  return card.update({ "system.targets": TargetsField.getDescriptors(tokens) }, { [MODULE_ID]: { targets: true } });
-}
-
-/**
- * updateChatMessage, on every client: a card drawn before its template was placed had no targets,
- * so dnd5e set its list to Selected for the session. With the template's targets, it goes back to
- * dnd5e's default, Targeted. Runs before the card is drawn again.
- */
-export function onUpdateCardTargets(message, changes, options) {
-  if ( !options?.[MODULE_ID]?.targets || (message._targetState?.mode !== "selected") ) return;
-  message._targetState.mode = "";
+  return card.update({ "system.targets": TargetsField.getDescriptors(tokens) }, TARGETS_UPDATE);
 }
 
 /* -------------------------------------------- */
@@ -60,6 +50,14 @@ export function onUpdateCardTargets(message, changes, options) {
 
 /** The activity whose template is being placed, and its preview regions. */
 let placement = null;
+
+/** Whether a template is being placed: from its first preview until it targets, or is cancelled. */
+let templating = false;
+
+/** Whether target changes now come from placing a template, not from the user. */
+export function isTemplating() {
+  return templating;
+}
 
 /** Preview arrows, by token. */
 const arrows = new Map();
@@ -102,6 +100,7 @@ export function onPreCreateTemplate(activity) {
 export function onRefreshRegion(region) {
   if ( !placement || !region.isPreview || !foundry.utils.getProperty(region.document.flags, "core.MeasuredTemplate") ) return;
   if ( !placement.previews.size && !placement.targets ) {
+    templating = true;
     placement.targets = Array.from(game.user.targets, t => t.id);
     canvas.tokens.setTargets([]);
   }
@@ -117,7 +116,10 @@ export function onDestroyRegion(region) {
   if ( !placement?.previews.delete(region) ) return;
   if ( canvas.regions._placementContext ) placement.cancelled = true;
   if ( placement.previews.size ) return;
-  if ( placement.cancelled ) canvas.tokens.setTargets(placement.targets);
+  if ( placement.cancelled ) {
+    canvas.tokens.setTargets(placement.targets);
+    templating = false;
+  }
   placement = null;
   showArrows([]);
 }
@@ -133,12 +135,14 @@ export function onPostCreateTemplate(activity, regions) {
   if ( !enabled() || !regions?.length ) return;
   const tokens = tokensInside(activity, regions);
   if ( canvas.scene === regions[0].parent ) canvas.tokens.setTargets(tokens.map(t => t.id));
+  templating = false;
   return setCardTargets(card, tokens);
 }
 
 /** dnd5e.preUseActivity: a new use, not a card's Place Template button. */
 export function onPreUseTemplate(activity) {
   placing.delete(activity.uuid);
+  templating = false;
 }
 
 /** dnd5e.postUseActivity: the item card gets the targets of the templates just placed. */

@@ -212,3 +212,17 @@ describe("changeRolls", () => {
     expect(await changeRolls(message, "advantage", async () => null)).toBeNull();
   });
 });
+
+describe("a change by the owner of the actor who rolled", () => {
+  const roller = owners => ({ testUserPermission: user => owners.includes(user.id) });
+
+  it("is saved by the GM, only the rolls and the module's flags", async () => {
+    const { onSaveRollsQuery } = await import("../scripts/rebuild.mjs");
+    const message = game.messages.add(new Message({ author: "gm" }));
+    message.getAssociatedActor = () => roller(["player"]);
+    expect(await onSaveRollsQuery({ message: message.id, data: { content: "forged" } }, { user: game.user })).toBe(false);
+    expect(await onSaveRollsQuery({ message: message.id, data: { rolls: [], "flags.steady-rolls.rolling": 1 } }, { user: game.user })).toBe(true);
+    message.getAssociatedActor = () => roller([]);
+    expect(await onSaveRollsQuery({ message: message.id, data: { rolls: [] } }, { user: game.user })).toBe(false);
+  });
+});

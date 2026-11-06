@@ -44,6 +44,10 @@
         "Name": "Target tokens in templates",
         "Hint": "Once an area of effect is placed, the tokens inside become your targets and the item card's, for its save and damage buttons. Spells that affect only allies or enemies take only those. While placing, faint arrows show who will be targeted."
       },
+      "FollowTargets": {
+        "Name": "Cards follow your targets",
+        "Hint": "Changing your targets also changes them on the newest card you made, its attack and its damage, until you make another card. Once damage is applied from it, untargeting removes no one, and new targets stay only if they take damage (or save) before your next card."
+      },
       "Rerolls": {
         "Name": "Rerolls",
         "Hint": "Who can click a die in a roll's breakdown to roll it again. The new result is used; an info card in chat shows the change and can undo it.",
@@ -60,7 +64,20 @@
       "Undone": "d{faces} reroll undone",
       "Undo": "Undo the reroll",
       "CannotUndo": "This reroll can't be undone: the die has changed since, or the roll can't be changed now."
-    }
+    },
+    "Save": {
+      "Pending": "Not rolled yet",
+      "Roll": "Roll the save",
+      "RollAbility": "Roll a {ability} save",
+      "AllRolled": "Your selected tokens already rolled this save. To change a result, reroll its dice.",
+      "SelectTokens": "Select tokens"
+    },
+    "Applied": {
+      "Damage": "Took {amount} damage from this card",
+      "Healing": "Healed {amount} by this card",
+      "Undo": "Click to undo"
+    },
+    "ResistNone": "No Legendary Resistance left"
   },
   "TYPES": {
     "ChatMessage": {
